@@ -1,187 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { Text, View, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { Pedometer } from 'expo-sensors';
 import { storage } from '../../utils/storage';
 
-// Sunset Color Palette
-const COLORS = {
-  bg: '#0B0F19',
-  card: '#1A1A2E',
-  border: '#27293D',
-  orangeDark: '#EA6113',
-  orangeMid: '#F88F22',
-  yellowGold: '#FB8931',
-  creamLight: '#FFE3B3',
-  textSub: '#8A8F9E',
-};
-
 export default function Index() {
-  const [steps, setSteps] = useState<number>(0);
+  const [steps, setSteps] = useState<number>(() => storage.getNumber('daily_steps') ?? 0);
+  const [isSensorActive, setIsSensorActive] = useState<boolean>(false);
   const goal = 6000;
 
-  // قراءة البيانات من MMKV عند فتح الصفحة
   useEffect(() => {
-    const savedSteps = storage.getNumber('daily_steps') ?? 0;
-    setSteps(savedSteps);
+    let subscription: Pedometer.Subscription | null = null;
+
+    const initPedometer = async () => {
+      const isAvailable = await Pedometer.isAvailableAsync();
+      setIsSensorActive(isAvailable);
+
+      if (isAvailable) {
+        subscription = Pedometer.watchStepCount((result) => {
+          setSteps((prevSteps) => {
+            const updated = prevSteps + result.steps;
+            storage.set('daily_steps', updated);
+            return updated;
+          });
+        });
+      }
+    };
+
+    initPedometer();
+    return () => { subscription && subscription.remove(); };
   }, []);
-
-  // إضافة خطوات وحفظها فورياً في MMKV
-  const addSteps = (amount: number) => {
-    const newSteps = steps + amount;
-    setSteps(newSteps);
-    storage.set('daily_steps', newSteps);
-  };
-
-  // إعادة ضبط التعداد
-  const resetSteps = () => {
-    setSteps(0);
-    storage.remove('daily_steps');
-  };
 
   const progress = Math.min((steps / goal) * 100, 100).toFixed(0);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.bg} />
-      
+    <SafeAreaView className="flex-1 bg-[#0B0F19] px-5 pt-10">
+      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
+
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.appName}>خُطى <Text style={styles.logoDot}>.</Text></Text>
-        <Text style={styles.dateText}>اليوم، النشاط الحالي</Text>
+      <View className="mb-6">
+        <Text className="text-3xl font-bold text-[#FFE3B3]">
+          خُطى <Text className="text-[#EA6113]">.</Text>
+        </Text>
+        <Text className="text-xs text-[#8A8F9E] mt-1">
+          حالة الحساس: {isSensorActive ? 'متصل ومفعل 🟢' : 'غير متاح 🔴'}
+        </Text>
       </View>
 
-      {/* Main Counter Card */}
-      <View style={styles.mainCard}>
-        <Text style={styles.cardTitle}>مجموع الخطوات</Text>
-        <Text style={styles.stepsText}>{steps.toLocaleString()}</Text>
-        
+      {/* Main Step Card */}
+      <View className="bg-[#1A1A2E] rounded-3xl p-6 border border-[#27293D] mb-5 shadow-lg">
+        <Text className="text-sm text-[#8A8F9E] mb-2 font-medium">مجموع الخطوات</Text>
+        <Text className="text-5xl font-extrabold text-[#FB8931] mb-5">
+          {steps.toLocaleString()}
+        </Text>
+
         {/* Progress Bar */}
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill]} />
+        <View className="h-3 bg-[#0B0F19] rounded-full overflow-hidden mb-3">
+          <View 
+            className="h-full bg-[#EA6113] rounded-full"  
+          />
         </View>
-        
-        <View style={styles.goalRow}>
-          <Text style={styles.goalText}>الهدف: {goal.toLocaleString()} خطوة</Text>
-          <Text style={styles.percentText}>{progress}%</Text>
+
+        <View className="flex-row-reverse justify-between items-center">
+          <Text className="text-xs text-[#FFE3B3]">الهدف: {goal.toLocaleString()} خطوة</Text>
+          <Text className="text-xs font-bold text-[#F88F22]">{progress}%</Text>
         </View>
       </View>
 
-      {/* Test Controls */}
-      <View style={styles.controlsCard}>
-        <Text style={styles.controlsTitle}>تفاعل محاكي الحساس (MMKV Test)</Text>
+      {/* Quick Test Controls */}
+      <View className="bg-[#1A1A2E] rounded-2xl p-5 border border-[#27293D]">
+        <Text className="text-sm text-[#FFE3B3] mb-4 text-center font-semibold">
+          اختبار التخزين السريع (MMKV)
+        </Text>
 
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => addSteps(500)}>
-          <Text style={styles.primaryBtnText}>+ 500 خطوة</Text>
+        <TouchableOpacity 
+          className="bg-[#EA6113] py-3.5 rounded-xl items-center mb-3 active:opacity-80"
+          onPress={() => {
+            const next = steps + 500;
+            setSteps(next);
+            storage.set('daily_steps', next);
+          }}
+        >
+          <Text className="text-white font-bold text-base">+ 500 خطوة</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryBtn} onPress={resetSteps}>
-          <Text style={styles.secondaryBtnText}>إعادة ضبط البيانات</Text>
+        <TouchableOpacity 
+          className="py-3 rounded-xl items-center border border-[#27293D] active:opacity-60"
+          onPress={() => {
+            setSteps(0);
+            storage.remove('daily_steps');
+          }}
+        >
+          <Text className="text-[#8A8F9E] text-lg">إعادة ضبط</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    paddingHorizontal: 20,
-    paddingTop: 40,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  appName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.creamLight,
-  },
-  logoDot: {
-    color: COLORS.orangeDark,
-  },
-  dateText: {
-    fontSize: 14,
-    color: COLORS.textSub,
-    marginTop: 4,
-  },
-  mainCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 20,
-  },
-  cardTitle: {
-    fontSize: 14,
-    color: COLORS.textSub,
-    marginBottom: 8,
-  },
-  stepsText: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: COLORS.yellowGold,
-    marginBottom: 20,
-  },
-  progressBarBg: {
-    height: 12,
-    backgroundColor: COLORS.bg,
-    borderRadius: 6,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.orangeDark,
-    borderRadius: 6,
-  },
-  goalRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-  },
-  goalText: {
-    fontSize: 13,
-    color: COLORS.creamLight,
-  },
-  percentText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: COLORS.orangeMid,
-  },
-  controlsCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  controlsTitle: {
-    fontSize: 14,
-    color: COLORS.creamLight,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  primaryBtn: {
-    backgroundColor: COLORS.orangeDark,
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  primaryBtnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  secondaryBtn: {
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  secondaryBtnText: {
-    color: COLORS.textSub,
-    fontSize: 14,
-  },
-});
