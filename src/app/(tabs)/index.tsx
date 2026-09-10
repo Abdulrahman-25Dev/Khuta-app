@@ -1,98 +1,237 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Text, View, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Line } from 'react-native-svg';
+import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause, RotateCcw } from 'lucide-react-native';
 import { Pedometer } from 'expo-sensors';
-import { storage } from '../../utils/storage';
+import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
 
-export default function Index() {
+export default function HomeScreen() {
   const [steps, setSteps] = useState<number>(() => storage.getNumber('daily_steps') ?? 0);
-  const [isSensorActive, setIsSensorActive] = useState<boolean>(false);
-  const goal = 6000;
+  const [coins, setCoins] = useState<number>(() => getStoredCoins());
+  const goal = 5000;
 
+  // حالة مؤقت الجلسة (Timer State)
+  const [isTracking, setIsTracking] = useState<boolean>(false);
+  const [secondsElapsed, setSecondsElapsed] = useState<number>(() => storage.getNumber('workout_seconds') ?? 0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const distanceKm = (steps * 0.00075).toFixed(2);
+  const calories = Math.round(steps * 0.04);
+
+  // إدارة مؤقت الثواني
+  useEffect(() => {
+    if (isTracking) {
+      timerRef.current = setInterval(() => {
+        setSecondsElapsed((prev) => {
+          const nextVal = prev + 1;
+          storage.set('workout_seconds', nextVal);
+          return nextVal;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [isTracking]);
+
+  // دالة تصفير الوقت
+  const resetTimer = () => {
+    setIsTracking(false);
+    setSecondsElapsed(0);
+    storage.set('workout_seconds', 0);
+  };
+
+  // تنسيق الوقت المباشر إلى (MM:SS)
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  // تتبع الحساس
   useEffect(() => {
     let subscription: Pedometer.Subscription | null = null;
 
-    const initPedometer = async () => {
-      const isAvailable = await Pedometer.isAvailableAsync();
-      setIsSensorActive(isAvailable);
+    const subscribe = async () => {
+      try {
+        const isAvailable = await Pedometer.isAvailableAsync();
+        if (isAvailable) {
+          subscription = Pedometer.watchStepCount((result) => {
+            setSteps((prev) => {
+              const newSteps = prev + result.steps;
+              storage.set('daily_steps', newSteps);
 
-      if (isAvailable) {
-        subscription = Pedometer.watchStepCount((result) => {
-          setSteps((prevSteps) => {
-            const updated = prevSteps + result.steps;
-            storage.set('daily_steps', updated);
-            return updated;
+              const newCoins = Math.floor(newSteps / 100);
+              setCoins(newCoins);
+              setStoredCoins(newCoins);
+
+              return newSteps;
+            });
           });
-        });
+        }
+      } catch (error) {
+        console.log('Pedometer Error:', error);
       }
     };
 
-    initPedometer();
-    return () => { subscription && subscription.remove(); };
+    subscribe();
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
   }, []);
 
-  const progress = Math.min((steps / goal) * 100, 100).toFixed(0);
+  const renderTicks = () => {
+    const totalTicks = 60;
+    const radius = 100;
+    const center = 120;
+    const progress = Math.min(steps / goal, 1);
+    const activeTicksCount = Math.floor(progress * totalTicks);
+
+    return Array.from({ length: totalTicks }).map((_, index) => {
+      const angle = (index * (360 / totalTicks) - 90) * (Math.PI / 180);
+      const x1 = center + (radius - 10) * Math.cos(angle);
+      const y1 = center + (radius - 10) * Math.sin(angle);
+      const x2 = center + radius * Math.cos(angle);
+      const y2 = center + radius * Math.sin(angle);
+
+      const isActive = index < activeTicksCount;
+
+      return (
+        <Line
+          key={index}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke={isActive ? '#EA6113' : '#1F2432'}
+          strokeWidth={isActive ? '3' : '2'}
+          strokeLinecap="round"
+        />
+      );
+    });
+  };
+
+  // الشرط: يظهر زر إعادة الضبط فقط إذا كان المؤقت متوقفاً وهناك ثوانٍ مسجلة
+  const showResetButton = !isTracking && secondsElapsed > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0B0F19] px-5 pt-10">
+    <SafeAreaView style={{ flex: 1 }} className="bg-bgDark">
       <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
-
-      {/* Header */}
-      <View className="mb-6">
-        <Text className="text-3xl font-bold text-[#FFE3B3]">
-          خُطى <Text className="text-[#EA6113]">.</Text>
-        </Text>
-        <Text className="text-xs text-[#8A8F9E] mt-1">
-          حالة الحساس: {isSensorActive ? 'متصل ومفعل 🟢' : 'غير متاح 🔴'}
-        </Text>
-      </View>
-
-      {/* Main Step Card */}
-      <View className="bg-[#1A1A2E] rounded-3xl p-6 border border-[#27293D] mb-5 shadow-lg">
-        <Text className="text-sm text-[#8A8F9E] mb-2 font-medium">مجموع الخطوات</Text>
-        <Text className="text-5xl font-extrabold text-[#FB8931] mb-5">
-          {steps.toLocaleString()}
-        </Text>
-
-        {/* Progress Bar */}
-        <View className="h-3 bg-[#0B0F19] rounded-full overflow-hidden mb-3">
-          <View 
-            className="h-full bg-[#EA6113] rounded-full"  
-          />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 30, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        
+        {/* Header */}
+        <View className="flex-row-reverse justify-between items-center mb-5">
+          <Text className="text-2xl font-bold text-creamLight">
+            خُطى <Text className="text-orangeDark">.</Text>
+          </Text>
+          
+          <View className="flex-row-reverse items-center bg-cardDark px-3.5 py-2 rounded-full border border-yellowGold/30 gap-1.5">
+            <Coins color="#FB8931" size={18} />
+            <Text className="text-creamLight text-sm font-bold">{coins} نقطة</Text>
+          </View>
         </View>
 
-        <View className="flex-row-reverse justify-between items-center">
-          <Text className="text-xs text-[#FFE3B3]">الهدف: {goal.toLocaleString()} خطوة</Text>
-          <Text className="text-xs font-bold text-[#F88F22]">{progress}%</Text>
+        {/* Circular Gauge Card */}
+        <View className="bg-cardDark rounded-3xl p-5 items-center border border-borderDark mb-5">
+          <View className="w-60 h-60 justify-center items-center relative">
+            <Svg height="240" width="240">
+              {renderTicks()}
+            </Svg>
+            
+            <View className="absolute items-center">
+              <Footprints color="#EA6113" size={28} style={{ marginBottom: 4 }} />
+              <Text className="text-sm text-textSub">خطوات اليوم</Text>
+              <Text className="text-5xl font-black text-creamLight my-0.5">{steps.toLocaleString()}</Text>
+              <Text className="text-xs font-semibold text-orangeMid">تستهدف {goal.toLocaleString()}</Text>
+            </View>
+
+            {/* أزرار التحكم بالوقت */}
+            <View className="absolute -bottom-3 flex-row items-center gap-3">
+              {/* يظهر زر إعادة الضبط شرطياً فقط عند الإيقاف المؤقت بعد البدء */}
+              {showResetButton && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={resetTimer}
+                  className="w-11 h-11 rounded-full bg-borderDark/90 border-2 border-textSub/50 items-center justify-center shadow-lg"
+                >
+                  <RotateCcw color="#8A8F9E" size={18} />
+                </TouchableOpacity>
+              )}
+
+              {/* زر التشغيل والإيقاف الرئيسي */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setIsTracking((prev) => !prev)}
+                className="w-14 h-14 rounded-full bg-borderDark/90 border-2 border-orangeDark items-center justify-center shadow-lg"
+              >
+                <View className="w-10 h-10 rounded-full bg-orangeDark/20 items-center justify-center">
+                  {isTracking ? (
+                    <Pause color="#EA6113" size={20} />
+                  ) : (
+                    <Play color="#EA6113" size={20} style={{ marginLeft: 2 }} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Metrics Row */}
+          <View className="flex-row-reverse w-full justify-around items-center mt-8 pt-4 border-t border-borderDark">
+            <View className="items-center">
+              <MapPin color="#FB8931" size={20} />
+              <Text className="text-lg font-bold text-creamLight mt-1.5">{distanceKm}</Text>
+              <Text className="text-xs text-textSub mt-0.5">مسافة</Text>
+            </View>
+
+            <View className="w-px h-7 bg-borderDark" />
+
+            <View className="items-center">
+              <Clock color="#F88F22" size={20} />
+              <Text className="text-lg font-bold text-creamLight mt-1.5">
+                {formatTime(secondsElapsed)}
+              </Text>
+              <Text className="text-xs text-textSub mt-0.5">
+                {isTracking ? 'وقت نشط 🟢' : 'وقت'}
+              </Text>
+            </View>
+
+            <View className="w-px h-7 bg-borderDark" />
+
+            <View className="items-center">
+              <Flame color="#EA6113" size={20} />
+              <Text className="text-lg font-bold text-creamLight mt-1.5">{calories}</Text>
+              <Text className="text-xs text-textSub mt-0.5">سعرات</Text>
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* Quick Test Controls */}
-      <View className="bg-[#1A1A2E] rounded-2xl p-5 border border-[#27293D]">
-        <Text className="text-sm text-[#FFE3B3] mb-4 text-center font-semibold">
-          اختبار التخزين السريع (MMKV)
-        </Text>
+        {/* Rewards / Badges Card */}
+        <View className="bg-cardDark rounded-3xl p-5 border border-borderDark">
+          <View className="flex-row-reverse items-center gap-2 mb-2">
+            <Award color="#FB8931" size={22} />
+            <Text className="text-lg font-bold text-creamLight">إنجازات خُطى</Text>
+          </View>
+          <Text className="text-xs text-textSub text-right leading-5">
+            {steps >= 5000 
+              ? '🎉 مبروك! حققت هدف اليوم وكسبت بونوس 50 نقطة!' 
+              : `تبقي ${(5000 - steps).toLocaleString()} خطوة للحصول على وسام اليوم.`}
+          </Text>
+        </View>
 
-        <TouchableOpacity 
-          className="bg-[#EA6113] py-3.5 rounded-xl items-center mb-3 active:opacity-80"
-          onPress={() => {
-            const next = steps + 500;
-            setSteps(next);
-            storage.set('daily_steps', next);
-          }}
-        >
-          <Text className="text-white font-bold text-base">+ 500 خطوة</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          className="py-3 rounded-xl items-center border border-[#27293D] active:opacity-60"
-          onPress={() => {
-            setSteps(0);
-            storage.remove('daily_steps');
-          }}
-        >
-          <Text className="text-[#8A8F9E] text-lg">إعادة ضبط</Text>
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
