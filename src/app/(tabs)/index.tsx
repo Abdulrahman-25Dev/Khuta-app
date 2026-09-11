@@ -116,7 +116,7 @@ export default function HomeScreen() {
           y1={y1}
           x2={x2}
           y2={y2}
-          stroke={isActive ? '#EA6113' : '#1F2432'}
+          stroke={isActive ? '#EA6113' : '#383B56'}
           strokeWidth={isActive ? '3' : '2'}
           strokeLinecap="round"
         />
@@ -155,7 +155,7 @@ export default function HomeScreen() {
               <Footprints color="#EA6113" size={28} style={{ marginBottom: 4 }} />
               <Text className="text-sm text-textSub">خطوات اليوم</Text>
               <Text className="text-5xl font-black text-creamLight my-0.5">{steps.toLocaleString()}</Text>
-              <Text className="text-xs font-semibold text-orangeMid">تستهدف {goal.toLocaleString()}</Text>
+              <Text className="text-xs font-semibold text-orangeMid">الهدف {goal.toLocaleString()}</Text>
             </View>
 
             {/* أزرار التحكم بالوقت */}
