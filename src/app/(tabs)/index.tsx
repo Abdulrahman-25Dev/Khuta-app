@@ -11,12 +11,13 @@ export default function HomeScreen() {
   const [coins, setCoins] = useState<number>(() => getStoredCoins());
   const goal = 5000;
 
-  // حالة مؤقت الجلسة (Timer State)
+  // حالة مؤقت الجلسة
   const [isTracking, setIsTracking] = useState<boolean>(false);
   const [secondsElapsed, setSecondsElapsed] = useState<number>(() => storage.getNumber('workout_seconds') ?? 0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const distanceKm = (steps * 0.00075).toFixed(2);
+  // احتساب المسافة والسعرات بناءً على طول القامة (160 سم ≈ 0.66 متر للخطوة)
+  const distanceKm = (steps * 0.00066).toFixed(2);
   const calories = Math.round(steps * 0.04);
 
   // إدارة مؤقت الثواني
@@ -29,11 +30,9 @@ export default function HomeScreen() {
           return nextVal;
         });
       }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
 
     return () => {
@@ -58,7 +57,7 @@ export default function HomeScreen() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // تتبع الحساس
+  // تتبع حساس الخطوات الأصلي بشكل دقيق
   useEffect(() => {
     let subscription: Pedometer.Subscription | null = null;
 
@@ -67,15 +66,22 @@ export default function HomeScreen() {
         const isAvailable = await Pedometer.isAvailableAsync();
         if (isAvailable) {
           subscription = Pedometer.watchStepCount((result) => {
-            setSteps((prev) => {
-              const newSteps = prev + result.steps;
-              storage.set('daily_steps', newSteps);
+            // إضافة الخطوات الجديدة فقط التي التقطها الحساس منذ بدء الاستماع
+            setSteps((prevSteps) => {
+              const updatedSteps = prevSteps + result.steps;
+              storage.set('daily_steps', updatedSteps);
 
-              const newCoins = Math.floor(newSteps / 100);
-              setCoins(newCoins);
-              setStoredCoins(newCoins);
+              // إضافة النقاط فقط عند قطع كل 100 خطوة جديدة (بدون مسح الرصيد القديم)
+              if (result.steps >= 100) {
+                const earnedCoins = Math.floor(result.steps / 100);
+                setCoins((prevCoins) => {
+                  const newTotalCoins = prevCoins + earnedCoins;
+                  setStoredCoins(newTotalCoins);
+                  return newTotalCoins;
+                });
+              }
 
-              return newSteps;
+              return updatedSteps;
             });
           });
         }
@@ -117,14 +123,13 @@ export default function HomeScreen() {
           x2={x2}
           y2={y2}
           stroke={isActive ? '#EA6113' : '#383B56'}
-          strokeWidth={isActive ? '3' : '2'}
+          strokeWidth={isActive ? '3.5' : '2'}
           strokeLinecap="round"
         />
       );
     });
   };
 
-  // الشرط: يظهر زر إعادة الضبط فقط إذا كان المؤقت متوقفاً وهناك ثوانٍ مسجلة
   const showResetButton = !isTracking && secondsElapsed > 0;
 
   return (
@@ -160,7 +165,6 @@ export default function HomeScreen() {
 
             {/* أزرار التحكم بالوقت */}
             <View className="absolute -bottom-3 flex-row items-center gap-3">
-              {/* يظهر زر إعادة الضبط شرطياً فقط عند الإيقاف المؤقت بعد البدء */}
               {showResetButton && (
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -171,7 +175,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )}
 
-              {/* زر التشغيل والإيقاف الرئيسي */}
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setIsTracking((prev) => !prev)}
@@ -193,7 +196,7 @@ export default function HomeScreen() {
             <View className="items-center">
               <MapPin color="#FB8931" size={20} />
               <Text className="text-lg font-bold text-creamLight mt-1.5">{distanceKm}</Text>
-              <Text className="text-xs text-textSub mt-0.5">مسافة</Text>
+              <Text className="text-xs text-textSub mt-0.5">مسافة (كم)</Text>
             </View>
 
             <View className="w-px h-7 bg-borderDark" />
@@ -225,9 +228,9 @@ export default function HomeScreen() {
             <Text className="text-lg font-bold text-creamLight">إنجازات خُطى</Text>
           </View>
           <Text className="text-xs text-textSub text-right leading-5">
-            {steps >= 5000 
-              ? '🎉 مبروك! حققت هدف اليوم وكسبت بونوس 50 نقطة!' 
-              : `تبقي ${(5000 - steps).toLocaleString()} خطوة للحصول على وسام اليوم.`}
+            {steps >= goal 
+              ? '🎉 مبروك! حققت هدف اليوم وكسبت وسام الإنجاز!' 
+              : `تبقي ${(goal - steps).toLocaleString()} خطوة للحصول على وسام اليوم.`}
           </Text>
         </View>
 
