@@ -16,7 +16,7 @@ const History = () => {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0B0F19] py-4">
+    <SafeAreaView className="flex-1 bg-[#0B0F19] py-6">
       <ScrollView className="flex-1 p-4">
         
         {/* 1. كروت الإحصائيات العلوية */}

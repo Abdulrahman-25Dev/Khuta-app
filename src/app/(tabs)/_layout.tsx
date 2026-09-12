@@ -21,7 +21,7 @@ export default function TabLayout() {
           borderTopColor: COLORS.border,
           height: 65,
           paddingBottom: 10,
-          paddingTop: 8,
+          paddingTop: 5,
         },
       }}
     >
@@ -35,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="History"
         options={{
-          title: 'التاريخ',
+          title: 'السجل',
           tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
         }}
       />
