@@ -1,24 +1,23 @@
 import { Tabs } from 'expo-router';
 import { Footprints, User, BarChart3 } from 'lucide-react-native';
-
-const COLORS = {
-  bg: '#0B0F19',
-  card: '#1A1A2E',
-  border: '#27293D',
-  orangeDark: '#EA6113',
-  textSub: '#8A8F9E',
-};
+import { useAppStore, colorPalettes } from '../../../store/useAppStore';
 
 export default function TabLayout() {
+  const accentColor = useAppStore((state) => state.accentColor);
+  const themeMode = useAppStore((state) => state.themeMode);
+
+  const activePalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
+  const currentTheme = themeMode === 'dark' ? activePalette : activePalette.light;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.orangeDark,
-        tabBarInactiveTintColor: COLORS.textSub,
+        tabBarActiveTintColor: activePalette.primary,
+        tabBarInactiveTintColor: currentTheme.subtext,
         tabBarStyle: {
-          backgroundColor: COLORS.card,
-          borderTopColor: COLORS.border,
+          backgroundColor: currentTheme.card,
+          borderTopColor: currentTheme.border,
           height: 65,
           paddingBottom: 10,
           paddingTop: 5,

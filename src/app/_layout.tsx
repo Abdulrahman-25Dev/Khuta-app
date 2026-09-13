@@ -2,36 +2,51 @@ import './global.css';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
+import { vars } from 'nativewind';
 
-// تأكد من مسار الاستيراد حسب هيكلة مجلداتك
-import { useAppStore, colorPalettes } from '../../store/useAppStore'; 
+import { useAppStore, colorPalettes } from '../../store/useAppStore';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
   const accentColor = useAppStore((state) => state.accentColor);
   const themeMode = useAppStore((state) => state.themeMode);
-  
-  // استدعاء الألوان للثيم النشط
-  const activePalette = colorPalettes[accentColor];
 
-  // ربط قيم Zustand بنفس المتغيرات الموجودة في tailwind.config.js
-  const themeVariables = {
-    '--color-bg': themeMode === 'dark' ? activePalette.bg : '#F8FAFC',
-    '--color-card': themeMode === 'dark' ? activePalette.card : '#FFFFFF',
-    '--color-border': themeMode === 'dark' ? activePalette.border : '#E2E8F0',
-    '--color-text': themeMode === 'dark' ? activePalette.text : '#0F172A',
-    '--color-subtext': themeMode === 'dark' ? activePalette.subtext : '#64748B',
+  const activePalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
+  const currentTheme = themeMode === 'dark' ? activePalette : activePalette.light;
+
+  const themeVariables = vars({
+    '--color-bg': currentTheme.bg,
+    '--color-card': currentTheme.card,
+    '--color-border': currentTheme.border,
+    '--color-text': currentTheme.text,
+    '--color-subtext': currentTheme.subtext,
     '--color-primary': activePalette.primary,
     '--color-secondary': activePalette.secondary,
-    '--color-text-light': activePalette.text,
-  } as any;
+  });
 
   return (
     <SafeAreaProvider>
-      {/* تمرير المتغيرات هنا لتغذي كل شاشات التطبيق */}
-      <View style={themeVariables} className="flex-1 bg-appBg">
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <View
+        key={`root-theme-${themeMode}-${accentColor}`}
+        style={themeVariables}
+        className="flex-1 bg-appBg"
+      >
+        <GestureHandlerRootView className="flex-1">
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: 'transparent' },
+          }}
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          />
         </Stack>
+      </GestureHandlerRootView>
       </View>
     </SafeAreaProvider>
   );
