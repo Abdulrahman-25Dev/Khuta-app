@@ -7,17 +7,22 @@ export default function TabLayout() {
   const themeMode = useAppStore((state) => state.themeMode);
 
   const activePalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
-  const currentTheme = themeMode === 'dark' ? activePalette : activePalette.light;
+  const isDark = themeMode === 'dark';
+
+  // الألوان الهيكلية لشريط التنقل بناءً على الوضع
+  const tabBgColor = isDark ? '#161B22' : '#FFFFFF'; // appCard-dark / appCard-light
+  const tabBorderColor = isDark ? '#21262D' : '#E2E8F0'; // appBorder-dark / appBorder-light
+  const inactiveColor = isDark ? '#8B949E' : '#64748B'; // appSubText-dark / appSubText-light
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: activePalette.primary,
-        tabBarInactiveTintColor: currentTheme.subtext,
+        tabBarInactiveTintColor: inactiveColor,
         tabBarStyle: {
-          backgroundColor: currentTheme.card,
-          borderTopColor: currentTheme.border,
+          backgroundColor: tabBgColor,
+          borderTopColor: tabBorderColor,
           height: 65,
           paddingBottom: 10,
           paddingTop: 5,

@@ -5,9 +5,8 @@ import BottomSheet, {
   BottomSheetBackdrop, 
   BottomSheetTextInput 
 } from '@gorhom/bottom-sheet';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, colorPalettes } from '../../store/useAppStore';
 
-// 1. إضافة dailyGoal إلى الأنواع المسموحة
 export type FieldType = 'name' | 'weight' | 'height' | 'dailyGoal' | null;
 
 interface Props {
@@ -16,8 +15,11 @@ interface Props {
 }
 
 export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, onClose }, ref) => {
-  const { user, updateUser } = useAppStore();
+  const { user, updateUser, themeMode, accentColor } = useAppStore();
   const [value, setValue] = useState('');
+
+  const isDark = themeMode === 'dark';
+  const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
 
   useEffect(() => {
     if (activeField && activeField in user) {
@@ -46,7 +48,6 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, o
         return { title: 'تعديل الوزن', placeholder: 'مثال: 70', keyboard: 'numeric', unit: 'كجم' };
       case 'height':
         return { title: 'تعديل الطول', placeholder: 'مثال: 170', keyboard: 'numeric', unit: 'سم' };
-      // 2. إضافة إعدادات الهدف اليومي
       case 'dailyGoal':
         return { title: 'تعديل الهدف اليومي', placeholder: 'مثال: 6000', keyboard: 'numeric', unit: 'خطوة' };
       default:
@@ -67,25 +68,27 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, o
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#161B26' }}
-      handleIndicatorStyle={{ backgroundColor: '#7A8499' }}
+      backgroundStyle={{ backgroundColor: isDark ? '#161B22' : '#FFFFFF' }}
+      handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
     >
       <BottomSheetView className="p-5 flex-1 justify-between">
-        <Text className="text-appText text-lg font-bold text-right mb-2">
+        <Text className="text-appText-light dark:text-appText-dark text-lg font-bold text-right mb-2">
           {config.title}
         </Text>
 
-        <View className="flex-row items-center bg-appBg border border-appBorder rounded-xl px-4 py-1">
+        <View className="flex-row items-center bg-appBg-light dark:bg-appBg-dark border border-appBorder-light dark:border-appBorder-dark rounded-xl px-4 py-1">
           {config.unit !== '' && (
-            <Text className="text-appSubtext font-bold text-base mr-2">{config.unit}</Text>
+            <Text className="text-appSubText-light dark:text-appSubText-dark font-bold text-base mr-2">
+              {config.unit}
+            </Text>
           )}
           <BottomSheetTextInput
             value={value}
             onChangeText={setValue}
             placeholder={config.placeholder}
-            placeholderTextColor="#7A8499"
+            placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
             keyboardType={config.keyboard as any}
-            className="flex-1 text-appText p-3 text-right text-base font-semibold"
+            className="flex-1 text-appText-light dark:text-appText-dark p-3 text-right text-base font-semibold"
             autoFocus
           />
         </View>
@@ -93,7 +96,8 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, o
         <TouchableOpacity
           onPress={handleSave}
           activeOpacity={0.8}
-          className="bg-primary p-4 rounded-xl items-center mt-4 mb-2"
+          style={{ backgroundColor: currentPalette.primary }}
+          className="p-4 rounded-xl items-center mt-4 mb-2"
         >
           <Text className="text-white font-bold text-base">حفظ التعديلات</Text>
         </TouchableOpacity>

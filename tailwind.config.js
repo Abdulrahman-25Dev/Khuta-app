@@ -2,34 +2,33 @@
 module.exports = {
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
-  darkMode: "class", // تمكين التبديل بين الوضعين الفاتح والداكن
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // الألوان الديناميكية للوضعين الداكن والفاتح
-        appBg: 'var(--color-bg)',
-        appCard: 'var(--color-card)',
-        appBorder: 'var(--color-border)',
-        appText: 'var(--color-text)',
-        appSubText: 'var(--color-subtext)',
-        
-        // ألوان الثيمات المخصصة (Sunset, Forest, Ocean, Violet, Maroon)
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        accentLight: 'var(--color-text-light)',
-
-        // الألوان الثابتة السابقة لثيم الغروب (إذا احتجتها في أماكن خاصة)
-        bgDark: '#0B0F19',
-        cardDark: '#1A1A2E',
-        borderDark: '#27293D',
-        orangeDark: '#EA6113',
-        orangeMid: '#F88F22',
-        yellowGold: '#FB8931',
-        creamLight: '#FFE3B3',
-        textSub: '#8A8F9E',
-        tickInactive: '#1F2432',
+        // ألوان موحدة للوضعين الفاتح والداكن (تستخدم عبر bg-appBg-light dark:bg-appBg-dark)
+        appBg: {
+          light: '#F8FAFC',
+          dark: '#0D1117',
+        },
+        appCard: {
+          light: '#FFFFFF',
+          dark: '#161B22',
+        },
+        appBorder: {
+          light: '#E2E8F0',
+          dark: '#21262D',
+        },
+        appText: {
+          light: '#0F172A',
+          dark: '#F0F6FC',
+        },
+        appSubText: {
+          light: '#64748B',
+          dark: '#8B949E',
+        },
       },
     },
   },
   plugins: [],
-}
+};
