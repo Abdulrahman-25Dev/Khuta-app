@@ -8,7 +8,10 @@
     "scheme": "khutaapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSMotionUsageDescription": "تُستخدم هذه الإذن لحساب خطواتك اليومية وعرضها في عدّاد الخطوات."
+      }
     },
     "android": {
       "adaptiveIcon": {

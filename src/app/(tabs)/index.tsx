@@ -50,11 +50,14 @@ export default function HomeScreen() {
     };
   }, [isTracking]);
 
-  // دالة تصفير الوقت
-  const resetTimer = () => {
+  // تصفير جميع مقاييس اليوم (الخطوات، المسافة، السعرات، الوقت) وإعادة تثبيت حساس الخطوات
+  const resetAll = () => {
+    stopTracking();
     setIsTracking(false);
     setSecondsElapsed(0);
     storage.set('workout_seconds', 0);
+    setSteps(0);
+    storage.set('daily_steps', 0);
   };
 
   // تنسيق الوقت المباشر إلى (MM:SS)
@@ -65,44 +68,81 @@ export default function HomeScreen() {
   };
 
   // تتبع حساس الخطوات
-  useEffect(() => {
-    let subscription: Pedometer.Subscription | null = null;
+  const [pedometerStatus, setPedometerStatus] = useState<string>('');
+  const pedometerSubscription = useRef<Pedometer.Subscription | null>(null);
 
-    const subscribe = async () => {
-      try {
-        const isAvailable = await Pedometer.isAvailableAsync();
-        if (isAvailable) {
-          subscription = Pedometer.watchStepCount((result) => {
-            setSteps((prevSteps) => {
-              const updatedSteps = prevSteps + result.steps;
-              storage.set('daily_steps', updatedSteps);
+  const stopTracking = () => {
+    if (pedometerSubscription.current) {
+      pedometerSubscription.current.remove();
+      pedometerSubscription.current = null;
+    }
+  };
 
-              if (result.steps >= 100) {
-                const earnedCoins = Math.floor(result.steps / 100);
-                setCoins((prevCoins) => {
-                  const newTotalCoins = prevCoins + earnedCoins;
-                  setStoredCoins(newTotalCoins);
-                  addCoins(earnedCoins);
-                  return newTotalCoins;
-                });
-              }
+  const startTracking = async () => {
+    stopTracking(); // Always purge existing active listeners first
+    setPedometerStatus('');
 
-              return updatedSteps;
-            });
+    try {
+      const isAvailable = await Pedometer.isAvailableAsync();
+      if (!isAvailable) {
+        setPedometerStatus('غير متاح على هذا الجهاز');
+        return;
+      }
+
+      const permission = await Pedometer.requestPermissionsAsync();
+      if (!permission.granted) {
+        setPedometerStatus('يرجى تفعيل إذن الحركة في الإعدادات');
+        return;
+      }
+
+      const sessionBase = steps;
+      let lastTotal: number | null = null;
+      let sessionSteps = 0;
+      let pendingCoins = 0;
+
+      pedometerSubscription.current = Pedometer.watchStepCount((result) => {
+        const total = result.steps;
+        const delta = lastTotal !== null && total > lastTotal ? total - lastTotal : 0;
+        lastTotal = total;
+
+        if (delta <= 0) return;
+
+        sessionSteps += delta;
+        const updatedSteps = sessionBase + sessionSteps;
+        setSteps(updatedSteps);
+        storage.set('daily_steps', updatedSteps);
+
+        pendingCoins += delta;
+        const earnedCoins = Math.floor(pendingCoins / 100);
+        if (earnedCoins > 0) {
+          pendingCoins -= earnedCoins * 100;
+          setCoins((prevCoins) => {
+            const newTotalCoins = prevCoins + earnedCoins;
+            setStoredCoins(newTotalCoins);
+            addCoins(earnedCoins);
+            return newTotalCoins;
           });
         }
-      } catch (error) {
-        console.log('Pedometer Error:', error);
-      }
-    };
+      });
+    } catch (error) {
+      console.log('Pedometer Error:', error);
+      setPedometerStatus('خطأ في مستشعر الخطوات');
+    }
+  };
 
-    subscribe();
+  const toggleTracking = () => {
+    if (isTracking) {
+      stopTracking();
+      setIsTracking(false);
+    } else {
+      setIsTracking(true);
+      startTracking();
+    }
+  };
 
-    return () => {
-      if (subscription) {
-        subscription.remove();
-      }
-    };
+  // تنظيف الاشتراك عند إغلاق الشاشة
+  useEffect(() => {
+    return () => stopTracking();
   }, []);
 
   const renderTicks = () => {
@@ -137,7 +177,7 @@ export default function HomeScreen() {
     });
   };
 
-  const showResetButton = !isTracking && secondsElapsed > 0;
+  const showResetButton = secondsElapsed > 0 || steps > 0;
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'dark bg-appBg-dark' : 'bg-appBg-light'}`}>
@@ -172,9 +212,13 @@ export default function HomeScreen() {
               <Text className="text-5xl font-black text-appText-light dark:text-appText-dark my-0.5">
                 {steps.toLocaleString()}
               </Text>
-              <Text style={{ color: currentPalette.secondary }} className="text-xs font-semibold">
-                الهدف {goal.toLocaleString()}
-              </Text>
+              {pedometerStatus ? (
+                <Text className="text-xs font-semibold text-red-500 mt-1">{pedometerStatus}</Text>
+              ) : (
+                <Text style={{ color: currentPalette.secondary }} className="text-xs font-semibold">
+                  الهدف {goal.toLocaleString()}
+                </Text>
+              )}
             </View>
 
             {/* أزرار التحكم بالوقت */}
@@ -182,7 +226,7 @@ export default function HomeScreen() {
               {showResetButton && (
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={resetTimer}
+                  onPress={resetAll}
                   className="w-11 h-11 rounded-full bg-appBg-light dark:bg-appBg-dark border-2 border-appBorder-light dark:border-appBorder-dark items-center justify-center shadow-lg"
                 >
                   <RotateCcw color="#8A8F9E" size={18} />
@@ -191,7 +235,7 @@ export default function HomeScreen() {
 
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => setIsTracking((prev) => !prev)}
+                onPress={toggleTracking}
                 style={{ borderColor: currentPalette.primary }}
                 className="w-14 h-14 rounded-full bg-appBg-light dark:bg-appBg-dark border-2 items-center justify-center shadow-lg"
               >
