@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { Text, View, ScrollView, StatusBar, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause, RotateCcw } from 'lucide-react-native';
@@ -21,6 +21,7 @@ export default function HomeScreen() {
   const [isTracking, setIsTracking] = useState<boolean>(false);
   const [secondsElapsed, setSecondsElapsed] = useState<number>(() => storage.getNumber('workout_seconds') ?? 0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionStart = useRef<number | null>(null);
 
   // احتساب المسافة والسعرات بناءً على طول القامة
   const stepLengthMeters = ((user?.height ?? 160) * 0.415) / 100;
@@ -31,11 +32,10 @@ export default function HomeScreen() {
   useEffect(() => {
     if (isTracking) {
       timerRef.current = setInterval(() => {
-        setSecondsElapsed((prev) => {
-          const nextVal = prev + 1;
-          storage.set('workout_seconds', nextVal);
-          return nextVal;
-        });
+        if (sessionStart.current === null) return;
+        const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+        setSecondsElapsed(elapsed);
+        storage.set('workout_seconds', elapsed);
       }, 1000);
     } else if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -50,21 +50,36 @@ export default function HomeScreen() {
     };
   }, [isTracking]);
 
+  // إعادة حساب الوقت فوراً عند العودة إلى التطبيق
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && sessionStart.current !== null) {
+        const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+        setSecondsElapsed(elapsed);
+        storage.set('workout_seconds', elapsed);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   // تصفير جميع مقاييس اليوم (الخطوات، المسافة، السعرات، الوقت) وإعادة تثبيت حساس الخطوات
   const resetAll = () => {
     stopTracking();
     setIsTracking(false);
+    sessionStart.current = null;
     setSecondsElapsed(0);
     storage.set('workout_seconds', 0);
     setSteps(0);
     storage.set('daily_steps', 0);
   };
 
-  // تنسيق الوقت المباشر إلى (MM:SS)
+  // تنسيق الوقت إلى (MM:SS) أو (HH:MM:SS) عند تجاوز الساعة
   const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+    return hrs > 0 ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`;
   };
 
   // تتبع حساس الخطوات
@@ -132,9 +147,16 @@ export default function HomeScreen() {
 
   const toggleTracking = () => {
     if (isTracking) {
+      if (sessionStart.current !== null) {
+        const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+        setSecondsElapsed(elapsed);
+        storage.set('workout_seconds', elapsed);
+        sessionStart.current = null;
+      }
       stopTracking();
       setIsTracking(false);
     } else {
+      sessionStart.current = Date.now() - secondsElapsed * 1000;
       setIsTracking(true);
       startTracking();
     }

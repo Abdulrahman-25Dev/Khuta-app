@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-android:
-    name: 🤖 بناء ملف APK
+    name: 🤖 بناء ملف APK عبر EAS
     runs-on: ubuntu-latest
 
     steps:
@@ -19,13 +19,7 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: ☕ إعداد Java (JDK 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: 📱 إعداد Expo CLI
+      - name: 📱 إعداد Expo & EAS CLI
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -35,17 +29,11 @@ jobs:
       - name: 📦 تثبيت الاعتماديات
         run: npm ci
 
-      - name: 🛠️ إنشاء مجلد Android (Prebuild)
-        run: npx expo prebuild --platform android
-
-      - name: 🏗️ بناء ملف APK بواسطة Gradle
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+      - name: 🏗️ بناء ملف APK موحد التوقيع
+        run: eas build --platform android --profile preview --non-interactive --local --output=app-release.apk
 
       - name: 📤 رفع ملف الـ APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: app-release.apk
