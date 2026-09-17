@@ -141,7 +141,7 @@ const Profile = () => {
           <View className="flex-row-reverse items-center gap-2 mb-3">
             <Palette color={currentPalette.primary} size={18} />
             <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">
-              لون الهوية (الريشة)
+              {currentPalette.name}
             </Text>
           </View>
           
