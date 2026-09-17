@@ -68,7 +68,7 @@ const Profile = () => {
   };
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'dark bg-appBg-dark' : 'bg-appBg-light'}`}>
+    <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark">
       <ScrollView className="flex-1 p-4">
         
         {/* 1. قسم الصورة والاسم والمستوى */}

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
+import { colorScheme } from 'nativewind';
 
 const storage = createMMKV();
 
@@ -13,7 +14,11 @@ const zustandStorage = {
 export type ThemeMode = 'dark' | 'light';
 export type AccentColor = 'sunset' | 'forest' | 'ocean' | 'violet' | 'maroon';
 
-// ريشة ألوان الهوية فقط (تم استبعاد bg/card/text لأنها انتقلت لـ Tailwind)
+export const getTodayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const colorPalettes = {
   sunset: {
     name: 'الغروب (Sunset)',
@@ -50,6 +55,16 @@ interface UserProfile {
   image?: string;
 }
 
+// 1. تعريف بنية السجل اليومي
+export interface DailyLog {
+  date: string; // صيغة YYYY-MM-DD
+  steps: number;
+  distance: number;
+  calories: number;
+  durationSeconds: number;
+  goalReached: boolean;
+}
+
 interface AppState {
   themeMode: ThemeMode;
   accentColor: AccentColor;
@@ -63,19 +78,30 @@ interface AppState {
   streakDays: number;
   totalCoins: number;
   addCoins: (amount: number) => void;
+
+  lastActiveDate: string;
+  setLastActiveDate: (date: string) => void;
+
+  // 2. حالة السجل ودوال التحديث
+  history: DailyLog[];
+  addOrUpdateDailyLog: (log: Omit<DailyLog, 'goalReached'>) => void;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       themeMode: 'dark',
       accentColor: 'sunset',
 
-      toggleTheme: () =>
-        set((state) => ({
-          themeMode: state.themeMode === 'dark' ? 'light' : 'dark',
-        })),
-      setTheme: (mode) => set({ themeMode: mode }),
+      toggleTheme: () => {
+        const next = get().themeMode === 'dark' ? 'light' : 'dark';
+        colorScheme.set(next);
+        set({ themeMode: next });
+      },
+      setTheme: (mode) => {
+        colorScheme.set(mode);
+        set({ themeMode: mode });
+      },
       setAccentColor: (color) => set({ accentColor: color }),
 
       user: {
@@ -95,6 +121,38 @@ export const useAppStore = create<AppState>()(
         set((state) => ({
           totalCoins: state.totalCoins + amount,
         })),
+
+      lastActiveDate: getTodayKey(),
+      setLastActiveDate: (date) => set({ lastActiveDate: date }),
+
+      // 3. القيمة الافتراضية ودالة تحديث السجل
+      history: [],
+      addOrUpdateDailyLog: (newLog) =>
+        set((state) => {
+          const userGoal = state.user.dailyGoal;
+          const isGoalMet = newLog.steps >= userGoal;
+          const existingIndex = state.history.findIndex(
+            (item) => item.date === newLog.date
+          );
+
+          let updatedHistory = [...state.history];
+
+          if (existingIndex >= 0) {
+            // تحديث سجّل اليوم الحالي
+            updatedHistory[existingIndex] = {
+              ...newLog,
+              goalReached: isGoalMet,
+            };
+          } else {
+            // إضافة سجل ليوم جديد
+            updatedHistory.push({
+              ...newLog,
+              goalReached: isGoalMet,
+            });
+          }
+
+          return { history: updatedHistory };
+        }),
     }),
     {
       name: 'khuta-app-storage',
@@ -113,6 +171,8 @@ export const useAppStore = create<AppState>()(
           },
           streakDays: 0,
           totalCoins: 0,
+          lastActiveDate: getTodayKey(),
+          history: [],
         };
         return { ...fallback, ...persisted } as AppState;
       },

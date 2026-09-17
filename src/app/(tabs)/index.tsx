@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, ScrollView, StatusBar, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause, RotateCcw } from 'lucide-react-native';
 import { Pedometer } from 'expo-sensors';
 
-import { useAppStore, colorPalettes } from '../../../store/useAppStore';
+import { useAppStore, colorPalettes, getTodayKey } from '../../../store/useAppStore';
 import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
 
 export default function HomeScreen() {
@@ -23,6 +23,14 @@ export default function HomeScreen() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStart = useRef<number | null>(null);
 
+  // مراجع للقيم الحية لتفادي الإغلاقات القديمة (stale closures)
+  const stepsRef = useRef<number>(steps);
+  const sessionBaseRef = useRef<number>(0);
+  const sessionStepsRef = useRef<number>(0);
+  const lastTotalRef = useRef<number | null>(null);
+  const secondsElapsedRef = useRef<number>(storage.getNumber('workout_seconds') ?? 0);
+  const ensureCurrentDayRef = useRef<() => void>(() => {});
+
   // احتساب المسافة والسعرات بناءً على طول القامة
   const stepLengthMeters = ((user?.height ?? 160) * 0.415) / 100;
   const distanceKm = ((steps * stepLengthMeters) / 1000).toFixed(2);
@@ -34,6 +42,7 @@ export default function HomeScreen() {
       timerRef.current = setInterval(() => {
         if (sessionStart.current === null) return;
         const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+        secondsElapsedRef.current = elapsed;
         setSecondsElapsed(elapsed);
         storage.set('workout_seconds', elapsed);
       }, 1000);
@@ -50,13 +59,68 @@ export default function HomeScreen() {
     };
   }, [isTracking]);
 
-  // إعادة حساب الوقت فوراً عند العودة إلى التطبيق
+  // إنهاء يوم اليوم السابق: تثبيت سجله النهائي وتصفير عدادات اليوم الجديد
+  const finalizeDay = useCallback(() => {
+    const store = useAppStore.getState();
+    const finalSteps = stepsRef.current;
+    const finalDistance = parseFloat(((finalSteps * stepLengthMeters) / 1000).toFixed(2));
+    const finalCalories = Math.round(finalSteps * 0.04);
+
+    store.addOrUpdateDailyLog({
+      date: store.lastActiveDate,
+      steps: finalSteps,
+      distance: finalDistance,
+      calories: finalCalories,
+      durationSeconds: secondsElapsedRef.current,
+    });
+
+    sessionStart.current = sessionStart.current !== null ? Date.now() : null;
+    secondsElapsedRef.current = 0;
+    setSecondsElapsed(0);
+    storage.set('workout_seconds', 0);
+
+    stepsRef.current = 0;
+    setSteps(0);
+    storage.set('daily_steps', 0);
+
+    sessionBaseRef.current = 0;
+    sessionStepsRef.current = 0;
+
+    store.setLastActiveDate(getTodayKey());
+  }, [stepLengthMeters]);
+
+  // التحقق من تجاوز منتصف الليل وتشغيل تصفير اليوم عند تغيّر التاريخ
+  const ensureCurrentDay = useCallback(() => {
+    if (getTodayKey() !== useAppStore.getState().lastActiveDate) {
+      finalizeDay();
+    }
+  }, [finalizeDay]);
+  useEffect(() => {
+    ensureCurrentDayRef.current = ensureCurrentDay;
+  }, [ensureCurrentDay]);
+
+  // مزامنة سجل اليوم مباشرة مع المتجر باستخدام مفتاح تاريخ اليوم الحالي
+  const syncDailyLog = (currentSteps: number) => {
+    useAppStore.getState().addOrUpdateDailyLog({
+      date: getTodayKey(),
+      steps: currentSteps,
+      distance: parseFloat(((currentSteps * stepLengthMeters) / 1000).toFixed(2)),
+      calories: Math.round(currentSteps * 0.04),
+      durationSeconds: secondsElapsedRef.current,
+    });
+  };
+
+  // إعادة التحقق من التاريخ عند كل عودة للتطبيق إلى المقدمة
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active' && sessionStart.current !== null) {
-        const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
-        setSecondsElapsed(elapsed);
-        storage.set('workout_seconds', elapsed);
+      if (nextState === 'active') {
+        ensureCurrentDayRef.current();
+        if (sessionStart.current !== null) {
+          const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+          secondsElapsedRef.current = elapsed;
+          setSecondsElapsed(elapsed);
+          storage.set('workout_seconds', elapsed);
+        }
       }
     });
     return () => subscription.remove();
@@ -67,10 +131,16 @@ export default function HomeScreen() {
     stopTracking();
     setIsTracking(false);
     sessionStart.current = null;
+    secondsElapsedRef.current = 0;
     setSecondsElapsed(0);
     storage.set('workout_seconds', 0);
+    stepsRef.current = 0;
     setSteps(0);
     storage.set('daily_steps', 0);
+    sessionBaseRef.current = 0;
+    sessionStepsRef.current = 0;
+    lastTotalRef.current = null;
+    syncDailyLog(0);
   };
 
   // تنسيق الوقت إلى (MM:SS) أو (HH:MM:SS) عند تجاوز الساعة
@@ -110,22 +180,27 @@ export default function HomeScreen() {
         return;
       }
 
-      const sessionBase = steps;
-      let lastTotal: number | null = null;
-      let sessionSteps = 0;
+      ensureCurrentDay();
+      sessionBaseRef.current = stepsRef.current;
+      sessionStepsRef.current = 0;
+      lastTotalRef.current = null;
       let pendingCoins = 0;
 
       pedometerSubscription.current = Pedometer.watchStepCount((result) => {
+        ensureCurrentDay();
+
         const total = result.steps;
-        const delta = lastTotal !== null && total > lastTotal ? total - lastTotal : 0;
-        lastTotal = total;
+        const delta = lastTotalRef.current !== null && total > lastTotalRef.current ? total - lastTotalRef.current : 0;
+        lastTotalRef.current = total;
 
         if (delta <= 0) return;
 
-        sessionSteps += delta;
-        const updatedSteps = sessionBase + sessionSteps;
+        sessionStepsRef.current += delta;
+        const updatedSteps = sessionBaseRef.current + sessionStepsRef.current;
+        stepsRef.current = updatedSteps;
         setSteps(updatedSteps);
         storage.set('daily_steps', updatedSteps);
+        syncDailyLog(updatedSteps);
 
         pendingCoins += delta;
         const earnedCoins = Math.floor(pendingCoins / 100);
@@ -149,6 +224,7 @@ export default function HomeScreen() {
     if (isTracking) {
       if (sessionStart.current !== null) {
         const elapsed = Math.floor((Date.now() - sessionStart.current) / 1000);
+        secondsElapsedRef.current = elapsed;
         setSecondsElapsed(elapsed);
         storage.set('workout_seconds', elapsed);
         sessionStart.current = null;
@@ -156,7 +232,7 @@ export default function HomeScreen() {
       stopTracking();
       setIsTracking(false);
     } else {
-      sessionStart.current = Date.now() - secondsElapsed * 1000;
+      sessionStart.current = Date.now() - secondsElapsedRef.current * 1000;
       setIsTracking(true);
       startTracking();
     }
@@ -164,6 +240,7 @@ export default function HomeScreen() {
 
   // تنظيف الاشتراك عند إغلاق الشاشة
   useEffect(() => {
+    ensureCurrentDayRef.current();
     return () => stopTracking();
   }, []);
 
@@ -202,7 +279,7 @@ export default function HomeScreen() {
   const showResetButton = secondsElapsed > 0 || steps > 0;
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'dark bg-appBg-dark' : 'bg-appBg-light'}`}>
+    <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark">
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 }} 
@@ -231,14 +308,14 @@ export default function HomeScreen() {
             <View className="absolute items-center">
               <Footprints color={currentPalette.primary} size={28} style={{ marginBottom: 4 }} />
               <Text className="text-sm text-appSubText-light dark:text-appSubText-dark">خطوات اليوم</Text>
-              <Text className="text-5xl font-black text-appText-light dark:text-appText-dark my-0.5">
-                {steps.toLocaleString()}
+              <Text className="text-4xl font-black text-appText-light dark:text-appText-dark my-0.5">
+                {steps.toLocaleString('en-US')}
               </Text>
               {pedometerStatus ? (
                 <Text className="text-xs font-semibold text-red-500 mt-1">{pedometerStatus}</Text>
               ) : (
                 <Text style={{ color: currentPalette.secondary }} className="text-xs font-semibold">
-                  الهدف {goal.toLocaleString()}
+                  الهدف {goal.toLocaleString('en-US')}
                 </Text>
               )}
             </View>
@@ -299,7 +376,7 @@ export default function HomeScreen() {
 
             <View className="items-center">
               <Flame color={currentPalette.primary} size={20} />
-              <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{calories}</Text>
+              <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{calories.toLocaleString('en-US')}</Text>
               <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">سعرات</Text>
             </View>
           </View>
@@ -314,7 +391,7 @@ export default function HomeScreen() {
           <Text className="text-xs text-appSubText-light dark:text-appSubText-dark text-right leading-5">
             {steps >= goal 
               ? '🎉 مبروك! حققت هدف اليوم وكسبت وسام الإنجاز!' 
-              : `تبقي ${(goal - steps).toLocaleString()} خطوة للحصول على وسام اليوم.`}
+              : `تبقي ${(goal - steps).toLocaleString('en-US')} خطوة للحصول على وسام اليوم.`}
           </Text>
         </View>
 
