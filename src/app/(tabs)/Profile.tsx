@@ -15,11 +15,29 @@ import {
   Camera,
   Sun,
   Moon,
-  Check
+  Check,
+  Sprout,
+  Footprints,
+  Zap,
+  Flame,
+  Crown,
+  Trophy,
+  LucideIcon
 } from 'lucide-react-native';
 
 import { useAppStore, colorPalettes, AccentColor } from '../../../store/useAppStore';
 import { EditProfileModal, FieldType } from '../../components/EditProfileModal';
+import { getUserLevel } from '../../utils/levelUtils';
+
+const levelIcons: Record<number, LucideIcon> = {
+  1: Sprout,
+  2: Footprints,
+  3: Zap,
+  4: Flame,
+  5: Award,
+  6: Crown,
+  7: Trophy,
+};
 
 const Profile = () => {
   // جلب البيانات والحالات المباشرة من Zustand
@@ -27,6 +45,7 @@ const Profile = () => {
     user, 
     updateUser, 
     streakDays, 
+    history, 
     accentColor, 
     setAccentColor, 
     themeMode, 
@@ -35,6 +54,10 @@ const Profile = () => {
 
   const currentPalette = colorPalettes[accentColor];
   const isDark = themeMode === 'dark';
+
+  const totalSteps = history.reduce((sum, log) => sum + log.steps, 0);
+  const currentLevel = getUserLevel(totalSteps);
+  const LevelIcon = levelIcons[currentLevel.level];
 
   // مرجع الـ Bottom Sheet والحقل النشط
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -102,9 +125,9 @@ const Profile = () => {
             {user.name}
           </Text>
           <View className="flex-row-reverse items-center gap-1 mt-1">
-            <Award color={currentPalette.secondary} size={14} />
+            <LevelIcon color={currentPalette.secondary} size={18} />
             <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-semibold">
-              المستوى 5 • خطى ذهبية
+              المستوى {currentLevel.level} • {currentLevel.title}
             </Text>
           </View>
         </View>
