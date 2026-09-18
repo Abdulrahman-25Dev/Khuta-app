@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, ScrollView, StatusBar, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
-import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause, RotateCcw } from 'lucide-react-native';
+import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause } from 'lucide-react-native';
 import { Pedometer } from 'expo-sensors';
 
 import { useAppStore, colorPalettes, getTodayKey } from '../../../store/useAppStore';
@@ -125,23 +125,6 @@ export default function HomeScreen() {
     });
     return () => subscription.remove();
   }, []);
-
-  // تصفير جميع مقاييس اليوم (الخطوات، المسافة، السعرات، الوقت) وإعادة تثبيت حساس الخطوات
-  const resetAll = () => {
-    stopTracking();
-    setIsTracking(false);
-    sessionStart.current = null;
-    secondsElapsedRef.current = 0;
-    setSecondsElapsed(0);
-    storage.set('workout_seconds', 0);
-    stepsRef.current = 0;
-    setSteps(0);
-    storage.set('daily_steps', 0);
-    sessionBaseRef.current = 0;
-    sessionStepsRef.current = 0;
-    lastTotalRef.current = null;
-    syncDailyLog(0);
-  };
 
   // تنسيق الوقت إلى (MM:SS) أو (HH:MM:SS) عند تجاوز الساعة
   const formatTime = (totalSeconds: number) => {
@@ -276,8 +259,6 @@ export default function HomeScreen() {
     });
   };
 
-  const showResetButton = secondsElapsed > 0 || steps > 0;
-
   return (
     <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark">
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -294,7 +275,7 @@ export default function HomeScreen() {
           
           <View className="flex-row-reverse items-center bg-appCard-light dark:bg-appCard-dark px-3.5 py-2 rounded-full border border-appBorder-light dark:border-appBorder-dark gap-1.5">
             <Coins color={currentPalette.primary} size={18} />
-            <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{coins} نقطة</Text>
+            <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{coins} عملة</Text>
           </View>
         </View>
 
@@ -320,18 +301,8 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {/* أزرار التحكم بالوقت */}
+            {/* زر التحكم بالوقت */}
             <View className="absolute -bottom-3 flex-row items-center gap-3">
-              {showResetButton && (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={resetAll}
-                  className="w-11 h-11 rounded-full bg-appBg-light dark:bg-appBg-dark border-2 border-appBorder-light dark:border-appBorder-dark items-center justify-center shadow-lg"
-                >
-                  <RotateCcw color="#8A8F9E" size={18} />
-                </TouchableOpacity>
-              )}
-
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={toggleTracking}
