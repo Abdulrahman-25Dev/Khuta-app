@@ -44,7 +44,6 @@ const Profile = () => {
   const { 
     user, 
     updateUser, 
-    streakDays, 
     history, 
     accentColor, 
     setAccentColor, 
@@ -56,6 +55,31 @@ const Profile = () => {
   const isDark = themeMode === 'dark';
 
   const totalSteps = history.reduce((sum, log) => sum + log.steps, 0);
+  const totalCalories = Math.round(totalSteps * 0.04);
+
+  const bestStreak = (() => {
+    const activeDates = history
+      .filter((log) => log.steps > 0)
+      .map((log) => log.date)
+      .sort();
+    let best = 0;
+    let current = 0;
+    let prevTime = 0;
+    for (const dateStr of activeDates) {
+      const time = new Date(dateStr + 'T00:00:00').getTime();
+      if (prevTime && time - prevTime === 86400000) {
+        current += 1;
+      } else {
+        current = 1;
+      }
+      prevTime = time;
+      best = Math.max(best, current);
+    }
+    return best;
+  })();
+
+  const formatNumber = (n: number) => n.toLocaleString('en-US');
+
   const currentLevel = getUserLevel(totalSteps);
   const LevelIcon = levelIcons[currentLevel.level];
 
@@ -193,17 +217,17 @@ const Profile = () => {
         {/* 4. كارت الإحصائيات الشاملة */}
         <View className="flex-row-reverse bg-appCard-light dark:bg-appCard-dark p-4 rounded-3xl border border-appBorder-light dark:border-appBorder-dark justify-between mb-6">
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">142.5k</Text>
+            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(totalSteps)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">إجمالي الخطوات</Text>
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{streakDays} يوم</Text>
+            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(bestStreak)} {bestStreak === 1 ? 'يوم' : 'أيام'}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">أعلى ستريك</Text>
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">3,400</Text>
+            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(totalCalories)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">سعرة حرارية</Text>
           </View>
         </View>
