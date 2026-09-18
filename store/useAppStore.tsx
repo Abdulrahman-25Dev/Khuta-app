@@ -76,6 +76,9 @@ interface AppState {
   updateUser: (newData: Partial<UserProfile>) => void;
 
   streakDays: number;
+
+  // رصيد العملات: قيمة تراكمية عالمية لا علاقة لها بالخطوات اليومية.
+  // تُحفظ دائماً ولا تُصفَّر أبداً، حتى عند إعادة ضبط خطوات اليوم عند منتصف الليل.
   totalCoins: number;
   addCoins: (amount: number) => void;
 
@@ -85,6 +88,8 @@ interface AppState {
   // 2. حالة السجل ودوال التحديث
   history: DailyLog[];
   addOrUpdateDailyLog: (log: Omit<DailyLog, 'goalReached'>) => void;
+  // إغلاق اليوم عند منتصف الليل: يثبّت سجل اليوم ويدفع التاريخ، دون أي مساس برصيد العملات
+  finalizeDay: (log: Omit<DailyLog, 'goalReached'>) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -116,7 +121,8 @@ export const useAppStore = create<AppState>()(
         })),
 
       streakDays: 0,
-      totalCoins: 0,
+      // التهيئة من النسخة الاحتياطية السابقة (khuta_coins) لضمان عدم فقدان الرصيد المتراكم
+      totalCoins: storage.getNumber('khuta_coins') ?? 0,
       addCoins: (amount) =>
         set((state) => ({
           totalCoins: state.totalCoins + amount,
@@ -153,11 +159,29 @@ export const useAppStore = create<AppState>()(
 
           return { history: updatedHistory };
         }),
+
+      // إغلاق اليوم: تثبيت سجل اليوم ثم تقدم التاريخ. رصيد العملات (totalCoins)
+      // يبقى كما هو ولا يُعدَّل نهائياً هنا.
+      finalizeDay: (newLog) => {
+        get().addOrUpdateDailyLog(newLog);
+        set({ lastActiveDate: getTodayKey() });
+      },
     }),
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 1,
+      version: 2,
+      // التخفيف: نحفظ بيانات الحالة الضرورية فقط، ومنها رصيد العملات (totalCoins)
+      // لضمان بقاء الرصيد المتراكم محفوظاً عبر إعادة فتح التطبيق وعبر الأيام.
+      partialize: (state) => ({
+        themeMode: state.themeMode,
+        accentColor: state.accentColor,
+        user: state.user,
+        streakDays: state.streakDays,
+        totalCoins: state.totalCoins,
+        lastActiveDate: state.lastActiveDate,
+        history: state.history,
+      }),
       migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState>;
         const fallback = {
@@ -174,6 +198,7 @@ export const useAppStore = create<AppState>()(
           lastActiveDate: getTodayKey(),
           history: [],
         };
+        // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return { ...fallback, ...persisted } as AppState;
       },
     }

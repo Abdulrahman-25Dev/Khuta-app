@@ -66,7 +66,8 @@ export default function HomeScreen() {
     const finalDistance = parseFloat(((finalSteps * stepLengthMeters) / 1000).toFixed(2));
     const finalCalories = Math.round(finalSteps * 0.04);
 
-    store.addOrUpdateDailyLog({
+    // إنهاء اليوم عبر دالة المتجر: تثبّت السجل وتُقدّم التاريخ، ولا تمسّ رصيد العملات أبداً
+    store.finalizeDay({
       date: store.lastActiveDate,
       steps: finalSteps,
       distance: finalDistance,
@@ -85,8 +86,6 @@ export default function HomeScreen() {
 
     sessionBaseRef.current = 0;
     sessionStepsRef.current = 0;
-
-    store.setLastActiveDate(getTodayKey());
   }, [stepLengthMeters]);
 
   // التحقق من تجاوز منتصف الليل وتشغيل تصفير اليوم عند تغيّر التاريخ
