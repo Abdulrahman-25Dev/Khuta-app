@@ -28,7 +28,6 @@ interface TaskTemplate {
   min: number;
   max: number;
   unit: string;
-  coinPerUnit: number;
   titles: string[];
 }
 
@@ -38,7 +37,6 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     min: 3000,
     max: 12000,
     unit: 'خطوة',
-    coinPerUnit: 0.01,
     titles: ['تحدي الخطوات', 'خطوات اليوم'],
   },
   {
@@ -46,7 +44,6 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     min: 2,
     max: 8,
     unit: 'كم',
-    coinPerUnit: 40,
     titles: ['تحدي المسافة', 'مسافة المشي'],
   },
   {
@@ -54,7 +51,6 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     min: 150,
     max: 500,
     unit: 'سعرة',
-    coinPerUnit: 0.4,
     titles: ['تحدي السعرات', 'حارق السعرات'],
   },
   {
@@ -62,7 +58,6 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     min: 20,
     max: 60,
     unit: 'دقيقة',
-    coinPerUnit: 2,
     titles: ['وقت النشاط', 'حركية الجلسة'],
   },
 ];
@@ -81,6 +76,19 @@ export const getTaskDays = (type: TaskType, target: number): number => {
   if (target <= dailyMax) return 1;
   if (target <= twoDayMax) return 2;
   return 3;
+};
+
+// مكافآت ثابتة بمبالغ نظيفة حسب صعوبة المهمة:
+// يوم واحد → 10 عملات، يومان → 25 أو 50، 3 أيام فأكثر → 100
+export const getTaskCoins = (type: TaskType, target: number): number => {
+  const days = getTaskDays(type, target);
+  if (days >= 3) return 100;
+  if (days === 2) {
+    const { dailyMax, twoDayMax } = TASK_THRESHOLDS[type];
+    const midpoint = (dailyMax + twoDayMax) / 2;
+    return target <= midpoint ? 25 : 50;
+  }
+  return 10;
 };
 
 // بذرة حتمية من التاريخ حتى تبقى المهام متطابقة طوال اليوم
@@ -120,7 +128,6 @@ export function generateDailyTasks(userLevel: number, dateString: string): Task[
   return chosen.map((template) => {
     const raw = randInt(rng, template.min, template.max);
     const target = Math.max(template.min, Math.round(raw * factor));
-    const coins = Math.max(1, Math.round(target * template.coinPerUnit * factor));
     const title = template.titles[randInt(rng, 0, template.titles.length - 1)];
     const days = getTaskDays(template.type, target);
 
@@ -130,7 +137,7 @@ export function generateDailyTasks(userLevel: number, dateString: string): Task[
       title,
       target,
       unit: template.unit,
-      coins,
+      coins: getTaskCoins(template.type, target),
       completed: false,
       days,
     };

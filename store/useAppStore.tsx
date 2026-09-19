@@ -3,7 +3,12 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
 import { colorScheme } from 'nativewind';
 
-import { generateDailyTasks, getTaskDays, Task } from '../src/utils/taskGenerator';
+import {
+  generateDailyTasks,
+  getTaskDays,
+  getTaskCoins,
+  Task,
+} from '../src/utils/taskGenerator';
 import { getUserLevel } from '../src/utils/levelUtils';
 
 const storage = createMMKV();
@@ -186,9 +191,15 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const today = getTodayKey();
           if (state.tasksDate === today) return {};
-          const totalSteps = state.history.reduce((sum, log) => sum + log.steps, 0);
+          const totalSteps = state.history.reduce(
+            (sum, log) => sum + log.steps,
+            0
+          );
           return {
-            dailyTasks: generateDailyTasks(getUserLevel(totalSteps).level, today),
+            dailyTasks: generateDailyTasks(
+              getUserLevel(totalSteps).level,
+              today
+            ),
             tasksDate: today,
           };
         }),
@@ -196,7 +207,8 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const task = state.dailyTasks.find((t) => t.id === taskId);
           if (!task || task.completed) return {};
-          const previousCoins = storage.getNumber('khuta_coins') ?? state.totalCoins;
+          const previousCoins =
+            storage.getNumber('khuta_coins') ?? state.totalCoins;
           const newCoins = previousCoins + task.coins;
           storage.set('khuta_coins', newCoins);
           return {
@@ -249,11 +261,14 @@ export const useAppStore = create<AppState>()(
         return {
           ...fallback,
           ...persisted,
-          // ضمان مطابقة الإطار الزمني للمهام المحفوظة مع قواعد الموازنة الحالية
-          dailyTasks: (persisted.dailyTasks ?? fallback.dailyTasks).map((task) => ({
-            ...task,
-            days: getTaskDays(task.type, task.target),
-          })),
+          // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
+          dailyTasks: (persisted.dailyTasks ?? fallback.dailyTasks).map(
+            (task) => ({
+              ...task,
+              days: getTaskDays(task.type, task.target),
+              coins: getTaskCoins(task.type, task.target),
+            })
+          ),
         } as AppState;
       },
     }

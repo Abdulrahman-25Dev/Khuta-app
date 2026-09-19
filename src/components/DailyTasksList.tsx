@@ -68,7 +68,13 @@ export default function DailyTasksList({
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dailyTasks, currentSteps, currentDistanceKm, currentCalories, currentMinutes]);
+  }, [
+    dailyTasks,
+    currentSteps,
+    currentDistanceKm,
+    currentCalories,
+    currentMinutes,
+  ]);
 
   return (
     <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl p-5 border border-appBorder-light dark:border-appBorder-dark">
@@ -86,7 +92,10 @@ export default function DailyTasksList({
         const done = isTaskComplete(task, current);
         const progress = done
           ? 100
-          : Math.min(100, Math.max(0, Math.round((current / task.target) * 100)));
+          : Math.min(
+              100,
+              Math.max(0, Math.round((current / task.target) * 100))
+            );
 
         return (
           <View
@@ -116,7 +125,10 @@ export default function DailyTasksList({
                     }}
                     className="px-1.5 py-0.5 rounded-full border"
                   >
-                    <Text style={{ color: currentPalette.primary }} className="text-[10px] font-bold">
+                    <Text
+                      style={{ color: currentPalette.primary }}
+                      className="text-[10px] font-bold"
+                    >
                       {getTaskTimeframe(task.days)}
                     </Text>
                   </View>
@@ -126,7 +138,9 @@ export default function DailyTasksList({
               {/* حالة الإكمال: تظهر تلقائياً عند الوصول إلى الهدف */}
               <View
                 style={{
-                  borderColor: done ? currentPalette.primary : currentPalette.secondary,
+                  borderColor: done
+                    ? currentPalette.primary
+                    : currentPalette.secondary,
                 }}
                 className={`w-9 h-9 rounded-full items-center justify-center border-2 ${
                   done ? '' : 'opacity-70'
@@ -144,7 +158,10 @@ export default function DailyTasksList({
             <View className="mt-3" style={{ direction: 'rtl' }}>
               <View className="h-1.5 rounded-full bg-appBorder-light dark:bg-appBorder-dark overflow-hidden">
                 <View
-                  style={{ width: `${progress}%`, backgroundColor: currentPalette.primary }}
+                  style={{
+                    width: `${progress}%`,
+                    backgroundColor: currentPalette.primary,
+                  }}
                   className="h-full rounded-full"
                 />
               </View>
@@ -154,8 +171,11 @@ export default function DailyTasksList({
             <View className="flex-row-reverse items-center justify-between mt-2.5">
               <View className="flex-row-reverse items-center gap-1">
                 <Coins color={currentPalette.primary} size={13} />
-                <Text style={{ color: currentPalette.primary }} className="text-xs font-bold">
-                  +{task.coins}
+                <Text
+                  style={{ color: currentPalette.primary }}
+                  className="text-xs font-bold"
+                >
+                  +{task.coins} عملة
                 </Text>
               </View>
               <Text className="text-appSubText-light dark:text-appSubText-dark text-[11px] font-bold">

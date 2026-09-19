@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Image, Alert } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomSheet from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter, Href } from 'expo-router';
 import { 
   User, 
   Target, 
@@ -22,6 +23,8 @@ import {
   Flame,
   Crown,
   Trophy,
+  Store,
+  Coins,
   LucideIcon
 } from 'lucide-react-native';
 
@@ -40,11 +43,13 @@ const levelIcons: Record<number, LucideIcon> = {
 };
 
 const Profile = () => {
+  const router = useRouter();
   // جلب البيانات والحالات المباشرة من Zustand
   const { 
     user, 
     updateUser, 
     history, 
+    totalCoins, 
     accentColor, 
     setAccentColor, 
     themeMode, 
@@ -79,6 +84,18 @@ const Profile = () => {
   })();
 
   const formatNumber = (n: number) => n.toLocaleString('en-US');
+
+  // صياغة مضغوطة للأعداد الكبيرة مثل 5.5k أو 1.2M
+  const formatCompact = (n: number) => {
+    if (n >= 1000000) {
+      return `${(n / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+    }
+    if (n >= 1000) {
+      const value = n / 1000;
+      return `${value >= 100 ? Math.round(value) : value.toFixed(1).replace(/\.0$/, '')}k`;
+    }
+    return n.toLocaleString('en-US');
+  };
 
   const currentLevel = getUserLevel(totalSteps);
   const LevelIcon = levelIcons[currentLevel.level];
@@ -217,7 +234,7 @@ const Profile = () => {
         {/* 4. كارت الإحصائيات الشاملة */}
         <View className="flex-row-reverse bg-appCard-light dark:bg-appCard-dark p-4 rounded-3xl border border-appBorder-light dark:border-appBorder-dark justify-between mb-6">
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(totalSteps)}</Text>
+            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatCompact(totalSteps)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">إجمالي الخطوات</Text>
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
@@ -227,12 +244,42 @@ const Profile = () => {
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(totalCalories)}</Text>
+            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatCompact(totalCalories)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">سعرة حرارية</Text>
           </View>
         </View>
 
-        {/* 5. قسم البيانات الشخصية والبدنية */}
+        {/* 5. المتجر والربح */}
+        <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold text-right mb-2 pr-1">
+          المتجر والربح
+        </Text>
+        <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl border border-appBorder-light dark:border-appBorder-dark overflow-hidden mb-6">
+          <TouchableOpacity
+            onPress={() => router.push('/store' as Href)}
+            activeOpacity={0.8}
+            className="flex-row-reverse justify-between items-center p-4"
+          >
+            <View className="flex-row-reverse items-center gap-3">
+              <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
+                <Store color={currentPalette.primary} size={18} />
+              </View>
+              <View>
+                <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">
+                  متجر خُطى
+                </Text>
+                <View className="flex-row-reverse items-center gap-1 mt-1">
+                  <Coins color={currentPalette.primary} size={12} />
+                  <Text style={{ color: currentPalette.primary }} className="text-xs font-bold">
+                    {formatNumber(totalCoins)} عملة
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <ChevronLeft color="#94A3B8" size={18} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 6. قسم البيانات الشخصية والبدنية */}
         <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold text-right mb-2 pr-1">
           البيانات الشخصية
         </Text>
@@ -308,7 +355,7 @@ const Profile = () => {
 
         </View>
 
-        {/* 6. قسم التنبيهات وإعدادات أخرى */}
+        {/* 7. قسم التنبيهات وإعدادات أخرى */}
         <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold text-right mb-2 pr-1">
           إعدادات أخرى
         </Text>
