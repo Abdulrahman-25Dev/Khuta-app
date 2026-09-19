@@ -6,7 +6,11 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, getTodayKey } from '../../store/useAppStore';
+import {
+  initializeNotifications,
+  syncEveningReminder,
+} from '../services/notificationService';
 
 export default function RootLayout() {
   const themeMode = useAppStore((state) => state.themeMode);
@@ -19,6 +23,26 @@ export default function RootLayout() {
       setColorScheme(themeMode);
     }
   }, [themeMode, activeScheme, setColorScheme]);
+
+  // تهيئة التنبيهات عالية الأولوية ومزامنة جدولة تذكير المساء مع حالة هدف اليوم
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await initializeNotifications();
+      if (cancelled) return;
+      const state = useAppStore.getState();
+      const todayKey = getTodayKey();
+      const todayLog = state.history.find((log) => log.date === todayKey);
+      await syncEveningReminder({
+        goalMetToday: todayLog?.goalReached ?? false,
+        notificationsEnabled: state.notificationsEnabled,
+        todayKey,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SafeAreaProvider>

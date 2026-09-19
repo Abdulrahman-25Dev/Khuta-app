@@ -10,6 +10,11 @@ import {
   Task,
 } from '../src/utils/taskGenerator';
 import { getUserLevel } from '../src/utils/levelUtils';
+import {
+  handleDailyGoalReached,
+  syncEveningReminder,
+  cancelEveningReminder,
+} from '../src/services/notificationService';
 
 const storage = createMMKV();
 
@@ -106,6 +111,10 @@ interface AppState {
   refreshDailyTasks: () => void;
   // إنهاء مهمة وإضافة مكافأة العملات إليها
   completeTask: (taskId: string) => void;
+
+  // تفضيل التحكم بالتنبيهات (إشعار إنجاز الهدف + تذكير المساء)
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -156,6 +165,10 @@ export const useAppStore = create<AppState>()(
           const existingIndex = state.history.findIndex(
             (item) => item.date === newLog.date
           );
+          const wasGoalMet =
+            existingIndex >= 0
+              ? state.history[existingIndex].goalReached
+              : false;
 
           let updatedHistory = [...state.history];
 
@@ -173,6 +186,15 @@ export const useAppStore = create<AppState>()(
             });
           }
 
+          // Trigger 1: لحظة انتقال تقدم اليوم إلى 100% نُطلق إشعاراً عالياً فورياً
+          // (مرة واحدة في اليوم) ونُلغي تذكير مساء نفس اليوم.
+          if (!wasGoalMet && isGoalMet && newLog.date === getTodayKey()) {
+            void handleDailyGoalReached({
+              notificationsEnabled: state.notificationsEnabled,
+              todayKey: newLog.date,
+            });
+          }
+
           return { history: updatedHistory };
         }),
 
@@ -182,6 +204,12 @@ export const useAppStore = create<AppState>()(
         get().addOrUpdateDailyLog(newLog);
         set({ lastActiveDate: getTodayKey() });
         get().refreshDailyTasks();
+        // Trigger 2: بعد انقلاب التاريخ نُبقي جدولة تذكير المساء متزامنة (اليوم غير مكتمل بعد)
+        void syncEveningReminder({
+          goalMetToday: false,
+          notificationsEnabled: get().notificationsEnabled,
+          todayKey: getTodayKey(),
+        });
       },
 
       // المهام اليومية: تُولَّد من تاريخ اليوم ومستوى المستخدم، وتظل ثابتة طوال اليوم
@@ -218,6 +246,25 @@ export const useAppStore = create<AppState>()(
             ),
           };
         }),
+
+      // تفعيل/تعطيل التنبيهات + مزامنة جدولة تذكير المساء فوراً
+      notificationsEnabled: true,
+      setNotificationsEnabled: (enabled) => {
+        set({ notificationsEnabled: enabled });
+        const state = get();
+        if (enabled) {
+          const todayLog = state.history.find(
+            (log) => log.date === getTodayKey()
+          );
+          void syncEveningReminder({
+            goalMetToday: todayLog?.goalReached ?? false,
+            notificationsEnabled: true,
+            todayKey: getTodayKey(),
+          });
+        } else {
+          void cancelEveningReminder();
+        }
+      },
     }),
     {
       name: 'khuta-app-storage',
@@ -238,6 +285,7 @@ export const useAppStore = create<AppState>()(
         history: state.history,
         dailyTasks: state.dailyTasks,
         tasksDate: state.tasksDate,
+        notificationsEnabled: state.notificationsEnabled,
       }),
       migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState>;
@@ -251,12 +299,13 @@ export const useAppStore = create<AppState>()(
             dailyGoal: 5000,
           },
           streakDays: 0,
-          totalCoins: 0,
-          lastActiveDate: getTodayKey(),
-          history: [],
-          dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-          tasksDate: getTodayKey(),
-        };
+totalCoins: 0,
+        lastActiveDate: getTodayKey(),
+        history: [],
+        dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
+        tasksDate: getTodayKey(),
+        notificationsEnabled: true,
+      };
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,

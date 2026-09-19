@@ -53,7 +53,9 @@ const Profile = () => {
     accentColor, 
     setAccentColor, 
     themeMode, 
-    toggleTheme 
+    toggleTheme,
+    notificationsEnabled,
+    setNotificationsEnabled
   } = useAppStore();
 
   const currentPalette = colorPalettes[accentColor];
@@ -355,23 +357,30 @@ const Profile = () => {
 
         </View>
 
-        {/* 7. قسم التنبيهات وإعدادات أخرى */}
+        {/* 7. قسم التنبيهات والإعدادات */}
         <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold text-right mb-2 pr-1">
-          إعدادات أخرى
+          الإعدادات
         </Text>
         <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl border border-appBorder-light dark:border-appBorder-dark overflow-hidden mb-10">
-          <TouchableOpacity className="flex-row-reverse justify-between items-center p-4">
+          <View className="flex-row-reverse items-center justify-between p-4">
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
                 <Bell color={currentPalette.primary} size={18} />
               </View>
               <View>
-                <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">تنبيهات التذكير</Text>
-                <Text className="text-appSubText-light dark:text-appSubText-dark text-xs text-right">مُفعّلة</Text>
+                <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">تنبيهات الهدف اليومي</Text>
+                <Text className="text-appSubText-light dark:text-appSubText-dark text-xs text-right">
+                  {notificationsEnabled ? 'مُفعّلة' : 'مُعطّلة'}
+                </Text>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
-          </TouchableOpacity>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={setNotificationsEnabled}
+              trackColor={{ false: '#CBD5E1', true: currentPalette.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
 
       </ScrollView>

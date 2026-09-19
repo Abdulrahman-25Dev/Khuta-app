@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
-import { Footprints, ChevronDown } from 'lucide-react-native';
+import { Footprints } from 'lucide-react-native';
 import {
   useAppStore,
   colorPalettes,
