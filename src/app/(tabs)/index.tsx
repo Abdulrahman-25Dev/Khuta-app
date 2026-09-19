@@ -2,19 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, View, ScrollView, StatusBar, TouchableOpacity, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
-import { Flame, MapPin, Clock, Footprints, Coins, Award, Play, Pause } from 'lucide-react-native';
+import { Flame, MapPin, Clock, Footprints, Coins, Play, Pause } from 'lucide-react-native';
 import { Pedometer } from 'expo-sensors';
 
 import { useAppStore, colorPalettes, getTodayKey } from '../../../store/useAppStore';
 import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
+import DailyTasksList from '../../components/DailyTasksList';
 
 export default function HomeScreen() {
-  const { accentColor, themeMode, user, addCoins } = useAppStore();
+  const { accentColor, themeMode, user, addCoins, totalCoins } = useAppStore();
   const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
   const isDark = themeMode === 'dark';
 
   const [steps, setSteps] = useState<number>(() => storage.getNumber('daily_steps') ?? 0);
-  const [coins, setCoins] = useState<number>(() => getStoredCoins());
   const goal = user?.dailyGoal ?? 5000;
 
   // حالة مؤقت الجلسة
@@ -188,12 +188,8 @@ export default function HomeScreen() {
         const earnedCoins = Math.floor(pendingCoins / 100);
         if (earnedCoins > 0) {
           pendingCoins -= earnedCoins * 100;
-          setCoins((prevCoins) => {
-            const newTotalCoins = prevCoins + earnedCoins;
-            setStoredCoins(newTotalCoins);
-            addCoins(earnedCoins);
-            return newTotalCoins;
-          });
+          setStoredCoins(getStoredCoins() + earnedCoins);
+          addCoins(earnedCoins);
         }
       });
     } catch (error) {
@@ -274,7 +270,7 @@ export default function HomeScreen() {
           
           <View className="flex-row-reverse items-center bg-appCard-light dark:bg-appCard-dark px-3.5 py-2 rounded-full border border-appBorder-light dark:border-appBorder-dark gap-1.5">
             <Coins color={currentPalette.primary} size={18} />
-            <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{coins} عملة</Text>
+            <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{totalCoins} عملة</Text>
           </View>
         </View>
 
@@ -352,18 +348,13 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Rewards / Badges Card */}
-        <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl p-5 border border-appBorder-light dark:border-appBorder-dark">
-          <View className="flex-row-reverse items-center gap-2 mb-2">
-            <Award color={currentPalette.primary} size={22} />
-            <Text className="text-lg font-bold text-appText-light dark:text-appText-dark">إنجازات خُطى</Text>
-          </View>
-          <Text className="text-xs text-appSubText-light dark:text-appSubText-dark text-right leading-5">
-            {steps >= goal 
-              ? '🎉 مبروك! حققت هدف اليوم وكسبت وسام الإنجاز!' 
-              : `تبقي ${(goal - steps).toLocaleString('en-US')} خطوة للحصول على وسام اليوم.`}
-          </Text>
-        </View>
+        {/* مهام اليوم الديناميكية */}
+        <DailyTasksList
+          currentSteps={steps}
+          currentDistanceKm={parseFloat(distanceKm)}
+          currentCalories={calories}
+          currentMinutes={secondsElapsed / 60}
+        />
 
       </ScrollView>
     </SafeAreaView>

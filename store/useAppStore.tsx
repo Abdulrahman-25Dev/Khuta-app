@@ -3,6 +3,9 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
 import { colorScheme } from 'nativewind';
 
+import { generateDailyTasks, getTaskDays, Task } from '../src/utils/taskGenerator';
+import { getUserLevel } from '../src/utils/levelUtils';
+
 const storage = createMMKV();
 
 const zustandStorage = {
@@ -90,6 +93,14 @@ interface AppState {
   addOrUpdateDailyLog: (log: Omit<DailyLog, 'goalReached'>) => void;
   // إغلاق اليوم عند منتصف الليل: يثبّت سجل اليوم ويدفع التاريخ، دون أي مساس برصيد العملات
   finalizeDay: (log: Omit<DailyLog, 'goalReached'>) => void;
+
+  // 3. المهام اليومية الديناميكية
+  dailyTasks: Task[];
+  tasksDate: string;
+  // تجديد المهام عند تغيّر التاريخ أو مستوى المستخدم
+  refreshDailyTasks: () => void;
+  // إنهاء مهمة وإضافة مكافأة العملات إليها
+  completeTask: (taskId: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -165,12 +176,44 @@ export const useAppStore = create<AppState>()(
       finalizeDay: (newLog) => {
         get().addOrUpdateDailyLog(newLog);
         set({ lastActiveDate: getTodayKey() });
+        get().refreshDailyTasks();
       },
+
+      // المهام اليومية: تُولَّد من تاريخ اليوم ومستوى المستخدم، وتظل ثابتة طوال اليوم
+      dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
+      tasksDate: getTodayKey(),
+      refreshDailyTasks: () =>
+        set((state) => {
+          const today = getTodayKey();
+          if (state.tasksDate === today) return {};
+          const totalSteps = state.history.reduce((sum, log) => sum + log.steps, 0);
+          return {
+            dailyTasks: generateDailyTasks(getUserLevel(totalSteps).level, today),
+            tasksDate: today,
+          };
+        }),
+      completeTask: (taskId) =>
+        set((state) => {
+          const task = state.dailyTasks.find((t) => t.id === taskId);
+          if (!task || task.completed) return {};
+          const previousCoins = storage.getNumber('khuta_coins') ?? state.totalCoins;
+          const newCoins = previousCoins + task.coins;
+          storage.set('khuta_coins', newCoins);
+          return {
+            totalCoins: state.totalCoins + task.coins,
+            dailyTasks: state.dailyTasks.map((t) =>
+              t.id === taskId ? { ...t, completed: true } : t
+            ),
+          };
+        }),
     }),
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 2,
+      version: 3,
+      onRehydrateStorage: () => (state) => {
+        state?.refreshDailyTasks();
+      },
       // التخفيف: نحفظ بيانات الحالة الضرورية فقط، ومنها رصيد العملات (totalCoins)
       // لضمان بقاء الرصيد المتراكم محفوظاً عبر إعادة فتح التطبيق وعبر الأيام.
       partialize: (state) => ({
@@ -181,6 +224,8 @@ export const useAppStore = create<AppState>()(
         totalCoins: state.totalCoins,
         lastActiveDate: state.lastActiveDate,
         history: state.history,
+        dailyTasks: state.dailyTasks,
+        tasksDate: state.tasksDate,
       }),
       migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState>;
@@ -197,9 +242,19 @@ export const useAppStore = create<AppState>()(
           totalCoins: 0,
           lastActiveDate: getTodayKey(),
           history: [],
+          dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
+          tasksDate: getTodayKey(),
         };
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
-        return { ...fallback, ...persisted } as AppState;
+        return {
+          ...fallback,
+          ...persisted,
+          // ضمان مطابقة الإطار الزمني للمهام المحفوظة مع قواعد الموازنة الحالية
+          dailyTasks: (persisted.dailyTasks ?? fallback.dailyTasks).map((task) => ({
+            ...task,
+            days: getTaskDays(task.type, task.target),
+          })),
+        } as AppState;
       },
     }
   )
