@@ -1,33 +1,38 @@
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Footprints, User, BarChart3 } from 'lucide-react-native';
-import { useAppStore, colorPalettes } from '../../../store/useAppStore';
+import { useAppStore } from '../../../store/useAppStore';
+import { appThemes } from '../../data/storeCatalog';
+
+// سطح شريط التبويب: يتبع وضع العرض (بطاقة داكنة/فاتحة)، وتبقى ألوان التمييز للمظهر
+const TAB_BAR_BG_DARK = '#1E293B';
+const TAB_BAR_BG_LIGHT = '#FFFFFF';
 
 export default function TabLayout() {
-  const accentColor = useAppStore((state) => state.accentColor);
   const themeMode = useAppStore((state) => state.themeMode);
+  const currentThemeId = useAppStore((state) => state.currentThemeId);
 
-  const activePalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
-  // قراءة مباشرة ومتزامنة من المتجر لتطبيق ألوان شريط التبويب مع الخلفية
+  const currentTheme =
+    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
   const isDark = themeMode === 'dark';
-  const tabBgColor = isDark ? '#161B22' : '#FFFFFF'; // appCard-dark / appCard-light
-  const tabBorderColor = isDark ? '#21262D' : '#E2E8F0'; // appBorder-dark / appBorder-light
-  const inactiveColor = isDark ? '#8B949E' : '#64748B'; // appSubText-dark / appSubText-light
+  const tabBarBg = isDark ? TAB_BAR_BG_DARK : TAB_BAR_BG_LIGHT;
+  const inactiveColor = isDark ? '#8B949E' : '#94A3B8';
 
   return (
     <View className={isDark ? 'dark flex-1' : 'flex-1'}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: activePalette.primary,
+          tabBarActiveTintColor: currentTheme.accent,
           tabBarInactiveTintColor: inactiveColor,
           tabBarStyle: {
-            backgroundColor: tabBgColor,
-            borderTopColor: tabBorderColor,
+            backgroundColor: tabBarBg,
+            borderTopColor: tabBarBg,
             height: 65,
             paddingBottom: 10,
             paddingTop: 5,
           },
+          sceneStyle: { backgroundColor: 'transparent' },
         }}
       >
         <Tabs.Screen

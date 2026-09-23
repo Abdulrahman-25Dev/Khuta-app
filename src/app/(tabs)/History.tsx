@@ -5,9 +5,9 @@ import { BarChart } from 'react-native-gifted-charts';
 import { Footprints } from 'lucide-react-native';
 import {
   useAppStore,
-  colorPalettes,
   DailyLog,
 } from '../../../store/useAppStore';
+import { appThemes } from '../../data/storeCatalog';
 
 const DAYS_AR = ['أح', 'إث', 'ثلا', 'أرب', 'خم', 'جم', 'سب'];
 
@@ -60,8 +60,12 @@ const getLongestStreak = (history: DailyLog[]) => {
 };
 
 const History = () => {
-  const { accentColor, themeMode, history } = useAppStore();
-  const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
+  const { themeMode, history } = useAppStore();
+  const currentThemeId = useAppStore((s) => s.currentThemeId);
+  const currentTheme =
+    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
+  // لون التمييز الديناميكي من المظهر المطبّق
+  const accent = currentTheme.accent;
   const isDark = themeMode === 'dark';
 
   // ألوان الرسم البياني والنصوص الديناميكية
@@ -97,8 +101,8 @@ const History = () => {
       value: log?.steps ?? 0,
       label: day.label,
       frontColor: log?.goalReached
-        ? currentPalette.primary
-        : currentPalette.secondary,
+          ? accent
+          : `${accent}66`,
     };
   });
 
@@ -108,7 +112,7 @@ const History = () => {
   const longestStreak = getLongestStreak(history);
 
   return (
-    <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark px-5">
+    <SafeAreaView className="flex-1 px-5">
       {/* 1. كروت الإحصائيات العلوية */}
       <View className="flex-row-reverse justify-between mb-5 gap-2 mt-5 ">
         <View className="flex-1 bg-appCard-light dark:bg-appCard-dark p-3 rounded-2xl items-center border border-appBorder-light dark:border-appBorder-dark">
@@ -116,7 +120,7 @@ const History = () => {
             اليوم
           </Text>
           <Text
-            style={{ color: currentPalette.primary }}
+            style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(todaySteps)}
@@ -131,7 +135,7 @@ const History = () => {
             المتوسط
           </Text>
           <Text
-            style={{ color: currentPalette.primary }}
+            style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(weekAverage)}
@@ -146,7 +150,7 @@ const History = () => {
             المجموع
           </Text>
           <Text
-            style={{ color: currentPalette.primary }}
+            style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(weekTotal)}
@@ -206,7 +210,7 @@ const History = () => {
           </View>
 
           <View className="w-16 h-16 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center border border-appBorder-light dark:border-appBorder-dark">
-            <Footprints color={currentPalette.primary} size={28} />
+            <Footprints color={accent} size={28} />
           </View>
         </View>
 

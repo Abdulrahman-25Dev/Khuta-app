@@ -5,7 +5,8 @@ import BottomSheet, {
   BottomSheetBackdrop, 
   BottomSheetTextInput 
 } from '@gorhom/bottom-sheet';
-import { useAppStore, colorPalettes } from '../../store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
+import { useTheme } from '../context/ThemeContext';
 
 export type FieldType = 'name' | 'weight' | 'height' | 'dailyGoal' | null;
 
@@ -14,12 +15,11 @@ interface Props {
   onClose: () => void;
 }
 
-export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, onClose }, ref) => {
-  const { user, updateUser, themeMode, accentColor } = useAppStore();
+export const EditProfileModal = forwardRef<BottomSheet, Props>(
+  ({ activeField, onClose }, ref) => {
+  const { user, updateUser } = useAppStore();
+  const { accent, isDark } = useTheme();
   const [value, setValue] = useState('');
-
-  const isDark = themeMode === 'dark';
-  const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
 
   useEffect(() => {
     if (activeField && activeField in user) {
@@ -68,7 +68,7 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, o
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: isDark ? '#161B22' : '#FFFFFF' }}
+      backgroundStyle={{ backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }}
       handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
     >
       <BottomSheetView className="p-5 flex-1 justify-between">
@@ -96,7 +96,7 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(({ activeField, o
         <TouchableOpacity
           onPress={handleSave}
           activeOpacity={0.8}
-          style={{ backgroundColor: currentPalette.primary }}
+          style={{ backgroundColor: accent }}
           className="p-4 rounded-xl items-center mt-4 mb-2"
         >
           <Text className="text-white font-bold text-base">حفظ التعديلات</Text>

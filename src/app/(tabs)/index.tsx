@@ -5,13 +5,18 @@ import Svg, { Line } from 'react-native-svg';
 import { Flame, MapPin, Clock, Footprints, Coins, Play, Pause } from 'lucide-react-native';
 import { Pedometer } from 'expo-sensors';
 
-import { useAppStore, colorPalettes, getTodayKey } from '../../../store/useAppStore';
+import { useAppStore, getTodayKey } from '../../../store/useAppStore';
+import { appThemes } from '../../data/storeCatalog';
 import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
 import DailyTasksList from '../../components/DailyTasksList';
 
 export default function HomeScreen() {
-  const { accentColor, themeMode, user, addCoins, totalCoins } = useAppStore();
-  const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
+  const { themeMode, user, addCoins, totalCoins } = useAppStore();
+  const currentThemeId = useAppStore((s) => s.currentThemeId);
+  const currentTheme =
+    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
+  // لون التمييز الديناميكي من المظهر المطبّق (الخلفية والبطاقات ثابتة)
+  const accent = currentTheme.accent;
   const isDark = themeMode === 'dark';
 
   const [steps, setSteps] = useState<number>(() => storage.getNumber('daily_steps') ?? 0);
@@ -246,7 +251,7 @@ export default function HomeScreen() {
           y1={y1}
           x2={x2}
           y2={y2}
-          stroke={isActive ? currentPalette.primary : inactiveTickColor}
+          stroke={isActive ? accent : inactiveTickColor}
           strokeWidth={isActive ? '3.5' : '2'}
           strokeLinecap="round"
         />
@@ -255,7 +260,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark">
+    <SafeAreaView className="flex-1">
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <ScrollView 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 }} 
@@ -265,11 +270,11 @@ export default function HomeScreen() {
         {/* Header */}
         <View className="flex-row-reverse justify-between items-center mb-5">
           <Text className="text-2xl font-bold text-appText-light dark:text-appText-dark">
-            خُطى <Text style={{ color: currentPalette.primary }}>.</Text>
+            خُطى <Text style={{ color: accent }}>.</Text>
           </Text>
           
           <View className="flex-row-reverse items-center bg-appCard-light dark:bg-appCard-dark px-3.5 py-2 rounded-full border border-appBorder-light dark:border-appBorder-dark gap-1.5">
-            <Coins color={currentPalette.primary} size={18} />
+            <Coins color={accent} size={18} />
             <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{totalCoins} عملة</Text>
           </View>
         </View>
@@ -282,7 +287,7 @@ export default function HomeScreen() {
             </Svg>
             
             <View className="absolute items-center">
-              <Footprints color={currentPalette.primary} size={28} style={{ marginBottom: 4 }} />
+              <Footprints color={accent} size={28} style={{ marginBottom: 4 }} />
               <Text className="text-sm text-appSubText-light dark:text-appSubText-dark">خطوات اليوم</Text>
               <Text className="text-4xl font-black text-appText-light dark:text-appText-dark my-0.5">
                 {steps.toLocaleString('en-US')}
@@ -290,7 +295,7 @@ export default function HomeScreen() {
               {pedometerStatus ? (
                 <Text className="text-xs font-semibold text-red-500 mt-1">{pedometerStatus}</Text>
               ) : (
-                <Text style={{ color: currentPalette.secondary }} className="text-xs font-semibold">
+                <Text style={{ color: accent }} className="text-xs font-semibold">
                   الهدف {goal.toLocaleString('en-US')}
                 </Text>
               )}
@@ -301,17 +306,17 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={toggleTracking}
-                style={{ borderColor: currentPalette.primary }}
+                style={{ borderColor: accent }}
                 className="w-14 h-14 rounded-full bg-appBg-light dark:bg-appBg-dark border-2 items-center justify-center shadow-lg"
               >
                 <View 
-                  style={{ backgroundColor: `${currentPalette.primary}20` }}
+                  style={{ backgroundColor: `${accent}20` }}
                   className="w-10 h-10 rounded-full items-center justify-center"
                 >
                   {isTracking ? (
-                    <Pause color={currentPalette.primary} size={20} />
+                    <Pause color={accent} size={20} />
                   ) : (
-                    <Play color={currentPalette.primary} size={20} style={{ marginLeft: 2 }} />
+                    <Play color={accent} size={20} style={{ marginLeft: 2 }} />
                   )}
                 </View>
               </TouchableOpacity>
@@ -321,7 +326,7 @@ export default function HomeScreen() {
           {/* Metrics Row */}
           <View className="flex-row-reverse w-full justify-around items-center mt-8 pt-4 border-t border-appBorder-light dark:border-appBorder-dark">
             <View className="items-center">
-              <MapPin color={currentPalette.secondary} size={20} />
+              <MapPin color={accent} size={20} />
               <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{distanceKm}</Text>
               <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">مسافة (كم)</Text>
             </View>
@@ -329,7 +334,7 @@ export default function HomeScreen() {
             <View className="w-px h-7 bg-appBorder-light dark:bg-appBorder-dark" />
 
             <View className="items-center">
-              <Clock color={currentPalette.primary} size={20} />
+              <Clock color={accent} size={20} />
               <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">
                 {formatTime(secondsElapsed)}
               </Text>
@@ -341,7 +346,7 @@ export default function HomeScreen() {
             <View className="w-px h-7 bg-appBorder-light dark:bg-appBorder-dark" />
 
             <View className="items-center">
-              <Flame color={currentPalette.primary} size={20} />
+              <Flame color={accent} size={20} />
               <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{calories.toLocaleString('en-US')}</Text>
               <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">سعرات</Text>
             </View>

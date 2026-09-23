@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { memo, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import {
   Footprints,
@@ -12,7 +12,8 @@ import {
   LucideIcon,
 } from 'lucide-react-native';
 
-import { useAppStore, colorPalettes } from '../../store/useAppStore';
+import { useAppStore } from '../../store/useAppStore';
+import { useTheme } from '../context/ThemeContext';
 import { Task, TaskType, getTaskTimeframe } from '../utils/taskGenerator';
 
 const taskIcons: Record<TaskType, LucideIcon> = {
@@ -45,14 +46,15 @@ const getCurrentValue = (task: Task, props: DailyTasksListProps): number => {
 const isTaskComplete = (task: Task, current: number) =>
   task.completed || current >= task.target;
 
-export default function DailyTasksList({
+export default memo(function DailyTasksList({
   currentSteps = 0,
   currentDistanceKm = 0,
   currentCalories = 0,
   currentMinutes = 0,
 }: DailyTasksListProps) {
-  const { accentColor, dailyTasks, completeTask } = useAppStore();
-  const currentPalette = colorPalettes[accentColor] ?? colorPalettes.sunset;
+  const { dailyTasks, completeTask } = useAppStore();
+  // لون التمييز يُقرأ من سياق المظهر الذرّي مباشرةً (لا useState/useEffect مؤجلة)
+  const { accent } = useTheme();
   const metrics: DailyTasksListProps = {
     currentSteps,
     currentDistanceKm,
@@ -79,7 +81,7 @@ export default function DailyTasksList({
   return (
     <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl p-5 border border-appBorder-light dark:border-appBorder-dark">
       <View className="flex-row-reverse items-center gap-2 mb-2">
-        <ListChecks color={currentPalette.primary} size={22} />
+        <ListChecks color={accent} size={22} />
         <Text className="text-lg font-bold text-appText-light dark:text-appText-dark">
           مهام اليوم
         </Text>
@@ -104,10 +106,10 @@ export default function DailyTasksList({
           >
             <View className="flex-row-reverse items-center justify-between gap-3">
               <View
-                style={{ backgroundColor: `${currentPalette.primary}20` }}
+                style={{ backgroundColor: `${accent}20` }}
                 className="w-10 h-10 rounded-full items-center justify-center"
               >
-                <TaskIcon color={currentPalette.secondary} size={20} />
+                <TaskIcon color={accent} size={20} />
               </View>
 
               <View className="flex-1">
@@ -120,13 +122,13 @@ export default function DailyTasksList({
                   </Text>
                   <View
                     style={{
-                      backgroundColor: `${currentPalette.primary}20`,
-                      borderColor: `${currentPalette.primary}40`,
+                      backgroundColor: `${accent}20`,
+                      borderColor: `${accent}40`,
                     }}
                     className="px-1.5 py-0.5 rounded-full border"
                   >
                     <Text
-                      style={{ color: currentPalette.primary }}
+                      style={{ color: accent }}
                       className="text-[10px] font-bold"
                     >
                       {getTaskTimeframe(task.days)}
@@ -139,17 +141,17 @@ export default function DailyTasksList({
               <View
                 style={{
                   borderColor: done
-                    ? currentPalette.primary
-                    : currentPalette.secondary,
+                    ? accent
+                    : `${accent}66`,
                 }}
                 className={`w-9 h-9 rounded-full items-center justify-center border-2 ${
                   done ? '' : 'opacity-70'
                 }`}
               >
                 {done ? (
-                  <CheckCircle2 color={currentPalette.primary} size={22} />
+                  <CheckCircle2 color={accent} size={22} />
                 ) : (
-                  <Circle color={currentPalette.secondary} size={20} />
+                  <Circle color={`${accent}66`} size={20} />
                 )}
               </View>
             </View>
@@ -160,7 +162,7 @@ export default function DailyTasksList({
                 <View
                   style={{
                     width: `${progress}%`,
-                    backgroundColor: currentPalette.primary,
+                    backgroundColor: accent,
                   }}
                   className="h-full rounded-full"
                 />
@@ -170,9 +172,9 @@ export default function DailyTasksList({
             {/* المكافأة ونسبة التقدم */}
             <View className="flex-row-reverse items-center justify-between mt-2.5">
               <View className="flex-row-reverse items-center gap-1">
-                <Coins color={currentPalette.primary} size={13} />
+                <Coins color={accent} size={13} />
                 <Text
-                  style={{ color: currentPalette.primary }}
+                  style={{ color: accent }}
                   className="text-xs font-bold"
                 >
                   +{task.coins} عملة
@@ -187,4 +189,4 @@ export default function DailyTasksList({
       })}
     </View>
   );
-}
+});

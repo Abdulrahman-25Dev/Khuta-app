@@ -15,6 +15,10 @@ import {
   syncEveningReminder,
   cancelEveningReminder,
 } from '../src/services/notificationService';
+import {
+  defaultThemeId,
+  defaultBannerId,
+} from '../src/data/storeCatalog';
 
 const storage = createMMKV();
 
@@ -115,6 +119,18 @@ interface AppState {
   // تفضيل التحكم بالتنبيهات (إشعار إنجاز الهدف + تذكير المساء)
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+
+  // متجر المظهر: مظهر التطبيق الحالي وخلفية البروفايل النشطة + المكتبات المملوكة
+  currentThemeId: string;
+  currentProfileBannerId: string;
+  ownedThemes: string[];
+  ownedProfileBanners: string[];
+  // تطبيق مظهر/خلفية مملوك (بدون خصم عملات)
+  applyTheme: (id: string) => void;
+  applyProfileBanner: (id: string) => void;
+  // شراء مظهر/خلفية: خصم العملات وإضافتها للمكتبة، وتُعيد true عند نجاح العملية
+  purchaseTheme: (id: string, price: number) => boolean;
+  purchaseProfileBanner: (id: string, price: number) => boolean;
 }
 
 export const useAppStore = create<AppState>()(
@@ -261,15 +277,54 @@ export const useAppStore = create<AppState>()(
             notificationsEnabled: true,
             todayKey: getTodayKey(),
           });
-        } else {
-          void cancelEveningReminder();
+} else {
+            void cancelEveningReminder();
+          }
+        },
+
+      // ————— متجر المظهر —————
+      // المظهر وخلفية البروفايل الافتراضيان (المجانيان) مطبّقان ومملوكان منذ البداية
+      currentThemeId: defaultThemeId,
+      currentProfileBannerId: defaultBannerId,
+      ownedThemes: [defaultThemeId],
+      ownedProfileBanners: [defaultBannerId],
+      applyTheme: (id) => set({ currentThemeId: id }),
+      applyProfileBanner: (id) => set({ currentProfileBannerId: id }),
+      purchaseTheme: (id, price) => {
+        const state = get();
+        if (state.ownedThemes.includes(id) || state.totalCoins < price) {
+          return false;
         }
+        const newCoins = state.totalCoins - price;
+        // مزامنة رصيد العملات مع مخزن MMKV القديم (khuta_coins) كما يفعل completeTask
+        storage.set('khuta_coins', newCoins);
+        set({
+          totalCoins: newCoins,
+          ownedThemes: [...state.ownedThemes, id],
+        });
+        return true;
+      },
+      purchaseProfileBanner: (id, price) => {
+        const state = get();
+        if (
+          state.ownedProfileBanners.includes(id) ||
+          state.totalCoins < price
+        ) {
+          return false;
+        }
+        const newCoins = state.totalCoins - price;
+        storage.set('khuta_coins', newCoins);
+        set({
+          totalCoins: newCoins,
+          ownedProfileBanners: [...state.ownedProfileBanners, id],
+        });
+        return true;
       },
     }),
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 3,
+      version: 4,
       onRehydrateStorage: () => (state) => {
         state?.refreshDailyTasks();
       },
@@ -286,6 +341,10 @@ export const useAppStore = create<AppState>()(
         dailyTasks: state.dailyTasks,
         tasksDate: state.tasksDate,
         notificationsEnabled: state.notificationsEnabled,
+        currentThemeId: state.currentThemeId,
+        currentProfileBannerId: state.currentProfileBannerId,
+        ownedThemes: state.ownedThemes,
+        ownedProfileBanners: state.ownedProfileBanners,
       }),
       migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState>;
@@ -299,13 +358,17 @@ export const useAppStore = create<AppState>()(
             dailyGoal: 5000,
           },
           streakDays: 0,
-totalCoins: 0,
-        lastActiveDate: getTodayKey(),
-        history: [],
-        dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-        tasksDate: getTodayKey(),
-        notificationsEnabled: true,
-      };
+          totalCoins: 0,
+          lastActiveDate: getTodayKey(),
+          history: [],
+          dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
+          tasksDate: getTodayKey(),
+          notificationsEnabled: true,
+          currentThemeId: defaultThemeId,
+          currentProfileBannerId: defaultBannerId,
+          ownedThemes: [defaultThemeId],
+          ownedProfileBanners: [defaultBannerId],
+        };
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,

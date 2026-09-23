@@ -9,11 +9,11 @@ module.exports = {
         // ألوان موحدة للوضعين الفاتح والداكن (تستخدم عبر bg-appBg-light dark:bg-appBg-dark)
         appBg: {
           light: '#F8FAFC',
-          dark: '#0D1117',
+          dark: '#0F172A',
         },
         appCard: {
           light: '#FFFFFF',
-          dark: '#161B22',
+          dark: '#1E293B',
         },
         appBorder: {
           light: '#E2E8F0',

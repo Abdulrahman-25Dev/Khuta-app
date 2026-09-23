@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, Href } from 'expo-router';
@@ -30,6 +31,7 @@ import {
 
 import { useAppStore, colorPalettes, AccentColor } from '../../../store/useAppStore';
 import { EditProfileModal, FieldType } from '../../components/EditProfileModal';
+import { profileBanners, appThemes } from '../../data/storeCatalog';
 import { getUserLevel } from '../../utils/levelUtils';
 
 const levelIcons: Record<number, LucideIcon> = {
@@ -60,6 +62,16 @@ const Profile = () => {
 
   const currentPalette = colorPalettes[accentColor];
   const isDark = themeMode === 'dark';
+  // لون التمييز الديناميكي من المظهر المطبّق عالمياً
+  const currentThemeId = useAppStore((s) => s.currentThemeId);
+  const currentTheme =
+    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
+  const accent = currentTheme.accent;
+  // خلفية البروفايل النشطة من المتجر (تُطبَّق فوراً دون إعادة تشغيل)
+  const currentProfileBannerId = useAppStore((s) => s.currentProfileBannerId);
+  const banner =
+    profileBanners.find((b) => b.id === currentProfileBannerId) ??
+    profileBanners[0];
 
   const totalSteps = history.reduce((sum, log) => sum + log.steps, 0);
   const totalCalories = Math.round(totalSteps * 0.04);
@@ -134,44 +146,57 @@ const Profile = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-appBg-light dark:bg-appBg-dark">
+    <SafeAreaView className="flex-1">
       <ScrollView className="flex-1 p-4">
-        
-        {/* 1. قسم الصورة والاسم والمستوى */}
-        <View className="items-center my-5">
-          <View className="relative">
-            <View 
-              style={{ borderColor: currentPalette.primary }} 
-              className="w-24 h-24 rounded-full bg-appCard-light dark:bg-appCard-dark border-2 justify-center items-center mb-3 overflow-hidden"
-            >
-              {user.image ? (
-                <Image 
-                  source={{ uri: user.image }} 
-                  className="w-full h-full" 
-                  resizeMode="cover" 
-                />
-              ) : (
-                <User color={currentPalette.primary} size={44} />
-              )}
-            </View>
-            <TouchableOpacity 
-              onPress={handlePickImage}
-              activeOpacity={0.8}
-              style={{ backgroundColor: currentPalette.primary }}
-              className="absolute bottom-3 left-0 p-1.5 rounded-full border-2 border-appBg-light dark:border-appBg-dark z-10"
-            >
-              <Camera color="#FFFFFF" size={14} />
-            </TouchableOpacity>
-          </View>
 
-          <Text className="text-appText-light dark:text-appText-dark text-xl font-bold">
-            {user.name}
-          </Text>
-          <View className="flex-row-reverse items-center gap-1 mt-1">
-            <LevelIcon color={currentPalette.secondary} size={18} />
-            <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-semibold">
-              المستوى {currentLevel.level} • {currentLevel.title}
+        {/* 1. شريط خلفية البروفايل + الصورة والاسم والمستوى */}
+        <View className="items-center my-5">
+          <View className="w-full">
+            {/* شريط التدرج العلوي */}
+            <LinearGradient
+              colors={banner.bannerGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="h-32 w-full rounded-3xl"
+            />
+
+            {/* صورة البروفايل متراكبة على حافة الشريط السفلي */}
+            <View className="items-center">
+              <View className="relative">
+                {/* الإطار الخارجي + قص الصورة داخل الدائرة تماماً */}
+                <View className="w-24 h-24 rounded-full justify-center items-center">
+                  <View className="w-full h-full rounded-full overflow-hidden justify-center items-center">
+                    {user.image ? (
+                      <Image
+                        source={{ uri: user.image }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <User color={accent} size={44} />
+                    )}
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={handlePickImage}
+                  activeOpacity={0.8}
+                  style={{ backgroundColor: accent }}
+                  className="absolute bottom-1 -right-1 p-1.5 rounded-full border-2 z-10"
+                >
+                  <Camera color="#FFFFFF" size={14} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text className="text-appText-light dark:text-appText-dark text-xl font-bold mt-3 text-center">
+              {user.name}
             </Text>
+            <View className="flex-row-reverse items-center gap-1 mt-1 justify-center">
+              <LevelIcon color={accent} size={18} />
+              <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-semibold">
+                المستوى {currentLevel.level} • {currentLevel.title}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -180,9 +205,9 @@ const Profile = () => {
           <View className="flex-row-reverse items-center gap-3">
             <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
               {isDark ? (
-                <Moon color={currentPalette.primary} size={18} />
+                <Moon color={accent} size={18} />
               ) : (
-                <Sun color={currentPalette.primary} size={18} />
+                <Sun color={accent} size={18} />
               )}
             </View>
             <View>
@@ -197,7 +222,7 @@ const Profile = () => {
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
-            trackColor={{ false: '#CBD5E1', true: currentPalette.primary }}
+            trackColor={{ false: '#CBD5E1', true: accent }}
             thumbColor="#FFFFFF"
           />
         </View>
@@ -205,7 +230,7 @@ const Profile = () => {
         {/* 3. اختيار ريشة ألوان الهوية */}
         <View className="bg-appCard-light dark:bg-appCard-dark p-4 rounded-3xl border border-appBorder-light dark:border-appBorder-dark mb-6">
           <View className="flex-row-reverse items-center gap-2 mb-3">
-            <Palette color={currentPalette.primary} size={18} />
+            <Palette color={accent} size={18} />
             <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">
               {currentPalette.name}
             </Text>
@@ -236,17 +261,17 @@ const Profile = () => {
         {/* 4. كارت الإحصائيات الشاملة */}
         <View className="flex-row-reverse bg-appCard-light dark:bg-appCard-dark p-4 rounded-3xl border border-appBorder-light dark:border-appBorder-dark justify-between mb-6">
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatCompact(totalSteps)}</Text>
+            <Text style={{ color: accent }} className="text-base font-bold">{formatCompact(totalSteps)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">إجمالي الخطوات</Text>
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatNumber(bestStreak)} {bestStreak === 1 ? 'يوم' : 'أيام'}</Text>
+            <Text style={{ color: accent }} className="text-base font-bold">{formatNumber(bestStreak)} {bestStreak === 1 ? 'يوم' : 'أيام'}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">أعلى ستريك</Text>
           </View>
           <View className="w-[1px] bg-appBorder-light dark:bg-appBorder-dark h-full" />
           <View className="items-center flex-1">
-            <Text style={{ color: currentPalette.primary }} className="text-base font-bold">{formatCompact(totalCalories)}</Text>
+            <Text style={{ color: accent }} className="text-base font-bold">{formatCompact(totalCalories)}</Text>
             <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px] mt-1">سعرة حرارية</Text>
           </View>
         </View>
@@ -263,15 +288,15 @@ const Profile = () => {
           >
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <Store color={currentPalette.primary} size={18} />
+                <Store color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">
                   متجر خُطى
                 </Text>
                 <View className="flex-row-reverse items-center gap-1 mt-1">
-                  <Coins color={currentPalette.primary} size={12} />
-                  <Text style={{ color: currentPalette.primary }} className="text-xs font-bold">
+                  <Coins color={accent} size={12} />
+                  <Text style={{ color: accent }} className="text-xs font-bold">
                     {formatNumber(totalCoins)} عملة
                   </Text>
                 </View>
@@ -294,7 +319,7 @@ const Profile = () => {
           >
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <User color={currentPalette.primary} size={18} />
+                <User color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">اسم المستخدم</Text>
@@ -311,7 +336,7 @@ const Profile = () => {
           >
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <Weight color={currentPalette.secondary} size={18} />
+                <Weight color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">الوزن</Text>
@@ -328,7 +353,7 @@ const Profile = () => {
           >
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <Ruler color={currentPalette.primary} size={18} />
+                <Ruler color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">الطول</Text>
@@ -345,7 +370,7 @@ const Profile = () => {
           >
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <Target color={currentPalette.primary} size={18} />
+                <Target color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">الهدف اليومي</Text>
@@ -365,7 +390,7 @@ const Profile = () => {
           <View className="flex-row-reverse items-center justify-between p-4">
             <View className="flex-row-reverse items-center gap-3">
               <View className="w-9 h-9 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center">
-                <Bell color={currentPalette.primary} size={18} />
+                <Bell color={accent} size={18} />
               </View>
               <View>
                 <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">تنبيهات الهدف اليومي</Text>
@@ -377,7 +402,7 @@ const Profile = () => {
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#CBD5E1', true: currentPalette.primary }}
+              trackColor={{ false: '#CBD5E1', true: accent }}
               thumbColor="#FFFFFF"
             />
           </View>
