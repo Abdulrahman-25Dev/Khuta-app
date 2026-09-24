@@ -1,9 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useState,
-  type ReactNode,
-} from 'react';
+import { memo, useCallback, useState, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -12,6 +7,7 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
+import Svg, { Circle, Line, G } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -30,15 +26,17 @@ import { useTheme } from '../../context/ThemeContext';
 import {
   appThemes,
   profileBanners,
+  ringStyles,
   defaultThemeId,
   AppTheme,
   ProfileBanner,
+  RingStyle,
 } from '../../data/storeCatalog';
 
 // المظهر الافتراضي غير قابل للشراء أو التبديل: يُخفى من شريط المتجر
 const shopThemes = appThemes.filter((t) => t.id !== defaultThemeId);
 
-type TabKey = 'themes' | 'banners';
+type TabKey = 'themes' | 'rings';
 
 const TABS: { key: TabKey; label: string; hint: string }[] = [
   {
@@ -47,9 +45,9 @@ const TABS: { key: TabKey; label: string; hint: string }[] = [
     hint: 'تدرجات تُطبَّق على خلفية التطبيق بالكامل',
   },
   {
-    key: 'banners',
-    label: 'خلفية البروفايل',
-    hint: 'شريط الألوان أعلى صفحة ملفك الشخصي',
+    key: 'rings',
+    label: 'أنماط العداد',
+    hint: 'تأثير حلقة التقدم في شاشة الخطوات اليوميّة',
   },
 ];
 
@@ -93,6 +91,35 @@ const StatusBadge = memo(function StatusBadge({ type }: { type: BadgeType }) {
 });
 
 // زر الإجراء أسفل كل بطاقة
+const ActivePlaceholder = memo(function ActivePlaceholder({
+  accent,
+}: {
+  accent: string;
+}) {
+  const { bg, border } = useTheme();
+
+  return (
+    <View
+      className="rounded-xl items-center justify-center border"
+      style={{
+        backgroundColor: bg,
+        borderColor: border,
+        height: 42,
+      }}
+    >
+      <View className="flex-row-reverse items-center gap-1 opacity-70">
+        <View
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+        <Text className="text-[10px] font-bold" style={{ color: accent }}>
+          نشط
+        </Text>
+      </View>
+    </View>
+  );
+});
+
 const ActionButton = memo(function ActionButton({
   state,
   onPress,
@@ -108,14 +135,13 @@ const ActionButton = memo(function ActionButton({
 
   if (state === 'active') {
     return (
-      <View
-        className="rounded-xl py-2.5 items-center opacity-60 flex-row justify-center gap-1 border"
-        style={{ backgroundColor: bg, borderColor: border }}
-      >
-        <Check color="#22C55E" size={14} strokeWidth={3} />
-        <Text className="font-bold text-sm" style={{ color: subText }}>
-          نشط
-        </Text>
+      <View>
+        <View className="h-5 items-center justify-center mb-1.5 opacity-60">
+          <Text className="text-[9px] font-bold" style={{ color: primary }}>
+            محدد
+          </Text>
+        </View>
+        <ActivePlaceholder accent={primary} />
       </View>
     );
   }
@@ -125,7 +151,11 @@ const ActionButton = memo(function ActionButton({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.8}
-        style={{ backgroundColor: primary, paddingVertical: 10, borderRadius: 8 }}
+        style={{
+          backgroundColor: primary,
+          paddingVertical: 10,
+          borderRadius: 8,
+        }}
         className="items-center"
       >
         <Text className="text-white font-bold text-sm">تطبيق</Text>
@@ -184,6 +214,7 @@ const ThemeCard = memo(function ThemeCard({
         borderColor: border,
         overflow: 'hidden',
         padding: 8,
+        minHeight: 230,
       }}
     >
       {/* معاينة لون التمييز فوق الخلفية الداكنة الثابتة */}
@@ -218,14 +249,357 @@ const ThemeCard = memo(function ThemeCard({
         {!owned && (
           <View className="flex-row-reverse items-center gap-1 mt-0.5">
             <Coins color={item.accent} size={10} />
-            <Text style={{ color: item.accent }} className="text-[10px] font-bold">
+            <Text
+              style={{ color: item.accent }}
+              className="text-[10px] font-bold"
+            >
               {formatNumber(item.price)}
             </Text>
           </View>
         )}
       </View>
-      {/* حاوية الزر بها حشوة سفلية واضحة فلا يتداخل زر الشراء مع الصفوف التالية */}
-      <View className="px-1 pb-1">
+      <View className="px-1 pb-1 flex-1 justify-end">
+        <ActionButton
+          state={isActive ? 'active' : owned ? 'apply' : 'buy'}
+          onPress={
+            isActive
+              ? undefined
+              : owned
+                ? () => onApply(item.id)
+                : () => onBuy(item, item.price)
+          }
+          price={item.price}
+          primary={item.accent}
+        />
+      </View>
+    </View>
+  );
+});
+
+const RingPreview = ({
+  style,
+  active,
+}: {
+  style: RingStyle;
+  active: boolean;
+}) => {
+  const ringColor = style.accent;
+  const radius = 26;
+  const center = 36;
+
+  switch (style.kind) {
+    case 'ticks':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          {Array.from({ length: 30 }).map((_, index) => {
+            const angle = (index * 360) / 30 - 90;
+            const rad = (angle * Math.PI) / 180;
+            const inner = 24;
+            const outer = 32;
+            const x1 = center + inner * Math.cos(rad);
+            const y1 = center + inner * Math.sin(rad);
+            const x2 = center + outer * Math.cos(rad);
+            const y2 = center + outer * Math.sin(rad);
+            const isActive = index < 12 && active;
+            return (
+              <Line
+                key={index}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={isActive ? ringColor : '#94A3B8'}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            );
+          })}
+          <Circle
+            cx={center}
+            cy={center}
+            r={7}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'wave':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          {Array.from({ length: 32 }).map((_, index) => {
+            const angle = (index * 360) / 32 - 90;
+            const rad = (angle * Math.PI) / 180;
+            const waveLength = [
+              7, 9, 12, 8, 13, 10, 7, 11, 9, 13, 10, 8, 12, 15, 10, 9, 13, 11,
+              8, 12, 10, 7, 11, 9, 14, 10, 8, 12, 9, 13, 10, 7,
+            ][index];
+            const inner = 18;
+            const outer = 22 + waveLength;
+            const x1 = center + inner * Math.cos(rad);
+            const y1 = center + inner * Math.sin(rad);
+            const x2 = center + outer * Math.cos(rad);
+            const y2 = center + outer * Math.sin(rad);
+            const isActive = index < 22 && active;
+            return (
+              <Line
+                key={index}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={isActive ? ringColor : '#94A3B8'}
+                strokeWidth="2.3"
+                strokeLinecap="round"
+                opacity={isActive ? 1 : 0.65}
+              />
+            );
+          })}
+          <Circle
+            cx={center}
+            cy={center}
+            r={7}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'solid':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="7"
+            strokeLinecap="round"
+            strokeDasharray="126 30"
+            opacity={active ? 1 : 0.8}
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={12}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'dots':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          {Array.from({ length: 20 }).map((_, index) => {
+            const angle = (index * 360) / 20 - 90;
+            const rad = (angle * Math.PI) / 180;
+            const x = center + 26 * Math.cos(rad);
+            const y = center + 26 * Math.sin(rad);
+            const visible = index < 12 && active;
+            return (
+              <Circle
+                key={index}
+                cx={x}
+                cy={y}
+                r={visible ? 2.8 : 2.2}
+                fill={visible ? ringColor : '#94A3B8'}
+              />
+            );
+          })}
+          <Circle
+            cx={center}
+            cy={center}
+            r={9}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'double':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle
+            cx={center}
+            cy={center}
+            r={28}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="3"
+            strokeDasharray="25 10"
+            opacity={active ? 1 : 0.8}
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={18}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="7"
+            strokeDasharray="70 16"
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'dash':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle
+            cx={center}
+            cy={center}
+            r={24}
+            fill="none"
+            stroke={active ? ringColor : '#94A3B8'}
+            strokeWidth="6"
+            strokeDasharray="16 10"
+            strokeLinecap="round"
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={8}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'pulse':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle
+            cx={center}
+            cy={center}
+            r={20}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="5"
+            opacity={active ? 1 : 0.7}
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={12}
+            fill={ringColor}
+            opacity={active ? 1 : 0.8}
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={28}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="2"
+            strokeDasharray="8 10"
+            opacity={active ? 0.9 : 0.4}
+          />
+        </Svg>
+      );
+    case 'arc':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <Circle
+            cx={center}
+            cy={center}
+            r={22}
+            fill="none"
+            stroke={active ? ringColor : '#94A3B8'}
+            strokeWidth="6"
+            strokeDasharray="70 28"
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+          />
+          <Circle
+            cx={center}
+            cy={center}
+            r={10}
+            fill={ringColor}
+            opacity={active ? 1 : 0.7}
+          />
+        </Svg>
+      );
+    case 'neon':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 72 72">
+          <G opacity={active ? 1 : 0.8}>
+            <Circle
+              cx={center}
+              cy={center}
+              r={26}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="5"
+              strokeDasharray="120 30"
+            />
+            <Circle
+              cx={center}
+              cy={center}
+              r={12}
+              fill={ringColor}
+              opacity={0.9}
+            />
+          </G>
+        </Svg>
+      );
+    default:
+      return null;
+  }
+};
+
+const RingStyleCard = memo(function RingStyleCard({
+  item,
+  isActive,
+  owned,
+  onApply,
+  onBuy,
+}: {
+  item: RingStyle;
+  isActive: boolean;
+  owned: boolean;
+  onApply: (id: string) => void;
+  onBuy: (item: RingStyle, price: number) => void;
+}) {
+  const { card, border, text } = useTheme();
+  const badge: BadgeType | undefined = isActive
+    ? 'active'
+    : !owned
+      ? item.premium
+        ? 'premium'
+        : 'locked'
+      : undefined;
+
+  return (
+    <View
+      className="flex-1 rounded-3xl border"
+      style={{
+        backgroundColor: card,
+        borderColor: border,
+        overflow: 'hidden',
+        padding: 8,
+        minHeight: 230,
+      }}
+    >
+      <View
+        className="relative h-24 rounded-2xl overflow-hidden items-center justify-center"
+        style={{ backgroundColor: card }}
+      >
+        <RingPreview style={item} active={isActive} />
+        {badge && <StatusBadge type={badge} />}
+      </View>
+      <View className="px-1 pt-2 pb-1">
+        <Text className="text-xs font-bold text-right" style={{ color: text }}>
+          {item.name}
+        </Text>
+        {!owned && (
+          <View className="flex-row-reverse items-center gap-1 mt-0.5">
+            <Coins color={item.accent} size={10} />
+            <Text
+              style={{ color: item.accent }}
+              className="text-[10px] font-bold"
+            >
+              {formatNumber(item.price)}
+            </Text>
+          </View>
+        )}
+      </View>
+      <View className="px-1 pb-1 flex-1 justify-end">
         <ActionButton
           state={isActive ? 'active' : owned ? 'apply' : 'buy'}
           onPress={
@@ -276,6 +650,7 @@ const BannerCard = memo(function BannerCard({
         borderColor: border,
         overflow: 'hidden',
         padding: 8,
+        minHeight: 230,
       }}
     >
       {/* محاكاة مصغّرة لرأس البروفايل: شريط التدرج مع صورة دائرية متراكبة عليه */}
@@ -286,10 +661,17 @@ const BannerCard = memo(function BannerCard({
           end={{ x: 0, y: 1 }}
           className="h-14 w-full"
         />
-        <View className="absolute left-0 right-0 bottom-0 h-10" style={{ backgroundColor: card }} />
+        <View
+          className="absolute left-0 right-0 bottom-0 h-10"
+          style={{ backgroundColor: card }}
+        />
         {/* صورة البروفايل الدائرية متراكبة على حد الشريط السفلي */}
         <View
-          style={{ marginLeft: -18, backgroundColor: card, borderColor: border }}
+          style={{
+            marginLeft: -18,
+            backgroundColor: card,
+            borderColor: border,
+          }}
           className="absolute left-1/2 top-[38px] w-9 h-9 rounded-full border-2 items-center justify-center"
         >
           <User color="#94A3B8" size={14} />
@@ -313,8 +695,7 @@ const BannerCard = memo(function BannerCard({
           </View>
         )}
       </View>
-      {/* حاوية الزر بها حشوة سفلية واضحة فلا يتداخل زر الشراء مع الصفوف التالية */}
-      <View className="px-1 pb-1">
+      <View className="px-1 pb-1 flex-1 justify-end">
         <ActionButton
           state={isActive ? 'active' : owned ? 'apply' : 'buy'}
           onPress={
@@ -346,11 +727,15 @@ export default function StoreScreen() {
   const activeTheme = useAppStore((s) => s.activeTheme);
   const ownedThemes = useAppStore((s) => s.ownedThemes);
   const currentProfileBannerId = useAppStore((s) => s.currentProfileBannerId);
+  const activeRingStyle = useAppStore((s) => s.activeRingStyle);
   const ownedProfileBanners = useAppStore((s) => s.ownedProfileBanners);
+  const ownedRingStyles = useAppStore((s) => s.ownedRingStyles);
   const selectStoreTheme = useAppStore((s) => s.selectStoreTheme);
   const applyProfileBanner = useAppStore((s) => s.applyProfileBanner);
+  const selectRingStyle = useAppStore((s) => s.selectRingStyle);
   const purchaseTheme = useAppStore((s) => s.purchaseTheme);
   const purchaseProfileBanner = useAppStore((s) => s.purchaseProfileBanner);
+  const purchaseRingStyle = useAppStore((s) => s.purchaseRingStyle);
 
   // ألوان الأسطح والتمييز من السياق الذرّي في نفس إطار القراءة
   const { isDarkMode, accent, card, border, text, subText } = useTheme();
@@ -366,6 +751,11 @@ export default function StoreScreen() {
     [applyProfileBanner]
   );
 
+  const handleApplyRingStyle = useCallback(
+    (id: string) => selectRingStyle(id),
+    [selectRingStyle]
+  );
+
   const handleBuyTheme = useCallback(
     (item: AppTheme, price: number) => {
       if (totalCoins < price) {
@@ -373,7 +763,10 @@ export default function StoreScreen() {
         return;
       }
       if (purchaseTheme(item.id, price)) {
-        Alert.alert('تم الشراء', 'أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».');
+        Alert.alert(
+          'تم الشراء',
+          'أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».'
+        );
       }
     },
     [totalCoins, purchaseTheme]
@@ -393,6 +786,22 @@ export default function StoreScreen() {
       }
     },
     [totalCoins, purchaseProfileBanner]
+  );
+
+  const handleBuyRingStyle = useCallback(
+    (item: RingStyle, price: number) => {
+      if (totalCoins < price) {
+        Alert.alert(INSUFFICIENT, INSUFFICIENT_MSG);
+        return;
+      }
+      if (purchaseRingStyle(item.id, price)) {
+        Alert.alert(
+          'تم الشراء',
+          'أُضيف نمط العداد إلى مكتبتك، فعّله من زر «تطبيق».'
+        );
+      }
+    },
+    [totalCoins, purchaseRingStyle]
   );
 
   // ————— عرض الشبكة عبر FlatList (معزول ولم يُعاد إنشاؤه إلا عند تغيّر الحالة ذات الصلة) —————
@@ -435,114 +844,132 @@ export default function StoreScreen() {
     ]
   );
 
+  const renderRingStyleItem = useCallback(
+    ({ item }: { item: RingStyle }) => (
+      <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
+        <RingStyleCard
+          item={item}
+          isActive={item.id === activeRingStyle}
+          owned={item.price === 0 || ownedRingStyles.includes(item.id)}
+          onApply={handleApplyRingStyle}
+          onBuy={handleBuyRingStyle}
+        />
+      </View>
+    ),
+    [activeRingStyle, ownedRingStyles, handleApplyRingStyle, handleBuyRingStyle]
+  );
+
   const activeTabData = TABS.find((t) => t.key === activeTab);
 
   return (
     <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-        {/* الرأس: رصيد العملات يميناً، زر العودة يساراً، والعنوان في المنتصف */}
-        <View className="relative flex-row items-center justify-center py-3 px-4">
-          <View
-            className="absolute left-4 flex-row-reverse items-center gap-1 border px-3 py-1.5 rounded-full"
-            style={{ backgroundColor: card, borderColor: border }}
-          >
-            <Coins color={accent} size={15} />
-            <Text style={{ color: accent }} className="text-sm font-black">
-              {formatNumber(totalCoins)}
-            </Text>
-          </View>
-
-          <Text className="text-base font-black" style={{ color: text }}>
-            متجر المظهر
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.8}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            className="absolute right-4 w-9 h-9 rounded-full border items-center justify-center"
-            style={{ backgroundColor: card, borderColor: border }}
-          >
-            <ChevronRight color={accent} size={20} />
-          </TouchableOpacity>
-        </View>
-
-        {/* شريط التبويبات */}
+      {/* الرأس: رصيد العملات يميناً، زر العودة يساراً، والعنوان في المنتصف */}
+      <View className="relative flex-row items-center justify-center py-3 px-4">
         <View
-          className="mx-4 mb-2 flex-row-reverse rounded-2xl border p-1"
+          className="absolute left-4 top-3 flex-row-reverse items-center gap-1 border px-3 py-1.5 rounded-full"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                activeOpacity={0.8}
-                style={isActive ? { backgroundColor: accent } : undefined}
-                className="flex-1 py-2 rounded-xl items-center"
-              >
-                <Text
-                  className="text-sm font-bold"
-                  style={{ color: isActive ? '#FFFFFF' : subText }}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          <Coins color={accent} size={15} />
+          <Text style={{ color: accent }} className="text-sm font-black">
+            {formatNumber(totalCoins)}
+          </Text>
         </View>
 
-        <Text className="text-xs font-bold text-center mb-3 px-6" style={{ color: subText }}>
-          {activeTabData?.hint}
+        <Text className="text-base font-black" style={{ color: text }}>
+          متجر المظهر
         </Text>
 
-        {/* المحتوى حسب التبويب */}
-        {activeTab === 'themes' ? (
-          <RtlGrid>
-            <FlatList<AppTheme>
-              key="themes"
-              data={shopThemes}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12 }}
-              contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingBottom: 32,
-                gap: 12,
-              }}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={4}
-              maxToRenderPerBatch={8}
-              windowSize={5}
-              removeClippedSubviews
-              renderItem={renderThemeItem}
-            />
-          </RtlGrid>
-        ) : (
-          <RtlGrid>
-            <FlatList<ProfileBanner>
-              key="banners"
-              data={profileBanners}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12 }}
-              contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingBottom: 32,
-                gap: 12,
-              }}
-              showsVerticalScrollIndicator={false}
-              initialNumToRender={4}
-              maxToRenderPerBatch={8}
-              windowSize={5}
-              removeClippedSubviews
-              renderItem={renderBannerItem}
-            />
-          </RtlGrid>
-        )}
-      </SafeAreaView>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          className="absolute right-4 w-9 h-9 rounded-full border items-center justify-center"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <ChevronRight color={accent} size={20} />
+        </TouchableOpacity>
+      </View>
+
+      {/* شريط التبويبات */}
+      <View
+        className="mx-4 mt-3 mb-2 flex-row-reverse rounded-2xl border p-1"
+        style={{ backgroundColor: card, borderColor: border }}
+      >
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.8}
+              style={isActive ? { backgroundColor: accent } : undefined}
+              className="flex-1 py-2 rounded-xl items-center"
+            >
+              <Text
+                className="text-sm font-bold"
+                style={{ color: isActive ? '#FFFFFF' : subText }}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Text
+        className="text-xs font-bold text-center mb-3 px-6"
+        style={{ color: subText }}
+      >
+        {activeTabData?.hint}
+      </Text>
+
+      {/* المحتوى حسب التبويب */}
+      {activeTab === 'themes' ? (
+        <RtlGrid>
+          <FlatList<AppTheme>
+            key="themes"
+            data={shopThemes}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={{ gap: 12 }}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 32,
+              gap: 12,
+            }}
+            showsVerticalScrollIndicator={false}
+            initialNumToRender={4}
+            maxToRenderPerBatch={8}
+            windowSize={5}
+            removeClippedSubviews
+            renderItem={renderThemeItem}
+          />
+        </RtlGrid>
+      ) : (
+        <RtlGrid>
+          <FlatList<RingStyle>
+            key="rings"
+            data={ringStyles}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={{ gap: 12 }}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 32,
+              gap: 12,
+            }}
+            showsVerticalScrollIndicator={false}
+            initialNumToRender={4}
+            maxToRenderPerBatch={8}
+            windowSize={5}
+            removeClippedSubviews
+            renderItem={renderRingStyleItem}
+          />
+        </RtlGrid>
+      )}
+    </SafeAreaView>
   );
 }
 

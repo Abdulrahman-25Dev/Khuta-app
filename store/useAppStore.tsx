@@ -19,7 +19,10 @@ import {
   appThemes,
   defaultThemeId,
   defaultBannerId,
+  defaultRingStyleId,
+  ringStyles,
   type AppTheme,
+  type RingStyle,
 } from '../src/data/storeCatalog';
 
 const storage = createMMKV();
@@ -36,8 +39,7 @@ export type AccentColor = 'sunset' | 'forest' | 'ocean' | 'violet' | 'maroon';
 // المصدر النشط الموحّد للون التمييز: إمّا مظهر من المتجر أو لون افتراضي.
 // هذه الحالة الواحدة تتحكّم في الاسم واللون الظاهرين في كل شاشات التطبيق.
 export type ActiveTheme =
-  | { kind: 'store'; themeId: string }
-  | { kind: 'profile'; color: AccentColor };
+  { kind: 'store'; themeId: string } | { kind: 'profile'; color: AccentColor };
 
 // نتيجة حَلّ المظهر النشط: اسم ولون المصدر الحالي (متجر أو لون افتراضي)
 export interface ResolvedTheme {
@@ -170,20 +172,25 @@ interface AppState {
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
 
-  // متجر المظهر: المظهر الموحّد النشط وخلفية البروفايل النشطة + المكتبات المملوكة
+  // متجر المظهر: المظهر الموحّد النشط + خلفية البروفايل النشطة + نمط العداد النشط + المكتبات المملوكة
   activeTheme: ActiveTheme;
   currentProfileBannerId: string;
+  activeRingStyle: string;
   ownedThemes: string[];
   ownedProfileBanners: string[];
+  ownedRingStyles: string[];
   // تطبيق مظهر من المتجر وإلغاء تفعيل أي لون افتراضي نشط
   selectStoreTheme: (theme: AppTheme | string) => void;
   // اختيار لون افتراضي: يُطبَّق لونه ويُلغى تفعيل أي مظهر من المتجر
   selectProfileTheme: (color: AccentColor) => void;
+  // تطبيق نمط العداد المملوك
+  selectRingStyle: (style: RingStyle | string) => void;
   // تطبيق خلفية بروفايل مملوكة (بدون خصم عملات)
   applyProfileBanner: (id: string) => void;
-  // شراء مظهر/خلفية: خصم العملات وإضافتها للمكتبة، وتُعيد true عند نجاح العملية
+  // شراء مظهر/خلفية/نمط العداد: خصم العملات وإضافتها للمكتبة، وتُعيد true عند نجاح العملية
   purchaseTheme: (id: string, price: number) => boolean;
   purchaseProfileBanner: (id: string, price: number) => boolean;
+  purchaseRingStyle: (id: string, price: number) => boolean;
 }
 
 export const useAppStore = create<AppState>()(
@@ -329,16 +336,18 @@ export const useAppStore = create<AppState>()(
             notificationsEnabled: true,
             todayKey: getTodayKey(),
           });
-} else {
-            void cancelEveningReminder();
-          }
-        },
+        } else {
+          void cancelEveningReminder();
+        }
+      },
 
       // ————— متجر المظهر —————
       // المظهر وخلفية البروفايل الافتراضيان (المجانيان) مطبّقان ومملوكان منذ البداية
       currentProfileBannerId: defaultBannerId,
+      activeRingStyle: defaultRingStyleId,
       ownedThemes: [defaultThemeId],
       ownedProfileBanners: [defaultBannerId],
+      ownedRingStyles: [defaultRingStyleId],
       // تطبيق مظهر من المتجر: يُثبّت المصدر النشط على مظهر المتجر،
       // فتُلغى تلقائياً أي علامة اختيار على الألوان الافتراضية في شاشة الملف.
       selectStoreTheme: (theme) => {
@@ -350,6 +359,11 @@ export const useAppStore = create<AppState>()(
       selectProfileTheme: (color) => {
         if (!colorPalettes[color]) return;
         set({ activeTheme: { kind: 'profile', color } });
+      },
+      selectRingStyle: (style) => {
+        const id = typeof style === 'string' ? style : style.id;
+        if (!ringStyles.some((t) => t.id === id)) return;
+        set({ activeRingStyle: id });
       },
       applyProfileBanner: (id) => set({ currentProfileBannerId: id }),
       purchaseTheme: (id, price) => {
@@ -382,6 +396,19 @@ export const useAppStore = create<AppState>()(
         });
         return true;
       },
+      purchaseRingStyle: (id, price) => {
+        const state = get();
+        if (state.ownedRingStyles.includes(id) || state.totalCoins < price) {
+          return false;
+        }
+        const newCoins = state.totalCoins - price;
+        storage.set('khuta_coins', newCoins);
+        set({
+          totalCoins: newCoins,
+          ownedRingStyles: [...state.ownedRingStyles, id],
+        });
+        return true;
+      },
     }),
     {
       name: 'khuta-app-storage',
@@ -404,8 +431,10 @@ export const useAppStore = create<AppState>()(
         tasksDate: state.tasksDate,
         notificationsEnabled: state.notificationsEnabled,
         currentProfileBannerId: state.currentProfileBannerId,
+        activeRingStyle: state.activeRingStyle,
         ownedThemes: state.ownedThemes,
         ownedProfileBanners: state.ownedProfileBanners,
+        ownedRingStyles: state.ownedRingStyles,
       }),
       migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
@@ -427,10 +456,15 @@ export const useAppStore = create<AppState>()(
           dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
           tasksDate: getTodayKey(),
           notificationsEnabled: true,
-          activeTheme: { kind: 'store', themeId: defaultThemeId } as ActiveTheme,
+          activeTheme: {
+            kind: 'store',
+            themeId: defaultThemeId,
+          } as ActiveTheme,
           currentProfileBannerId: defaultBannerId,
+          activeRingStyle: defaultRingStyleId,
           ownedThemes: [defaultThemeId],
           ownedProfileBanners: [defaultBannerId],
+          ownedRingStyles: [defaultRingStyleId],
         };
         // التوافق مع النسخ القديمة (التي خزّنت currentThemeId/accentColor منفصلين):
         // ننقل المظهر المطبّق إلى المصدر الموحّد activeTheme تلقائياً

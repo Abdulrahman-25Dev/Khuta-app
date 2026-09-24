@@ -79,18 +79,19 @@ export default memo(function DailyTasksList({
   ]);
 
   return (
-    <View
-      className="rounded-3xl p-5 border"
-      style={{ backgroundColor: card, borderColor: border }}
-    >
-      <View className="flex-row-reverse items-center gap-2 mb-2">
+    <View>
+      <View className="flex-row-reverse items-center gap-2 px-1 mb-3">
         <ListChecks color={accent} size={22} />
         <Text className="text-lg font-bold" style={{ color: text }}>
-          مهام اليوم
+         المهام اليومية
         </Text>
       </View>
 
-      {dailyTasks.map((task: Task, index: number) => {
+      <View
+        className="rounded-3xl p-5 border"
+        style={{ backgroundColor: card, borderColor: border }}
+      >
+        {dailyTasks.map((task: Task, index: number) => {
         const TaskIcon = taskIcons[task.type];
         const isLast = index === dailyTasks.length - 1;
         const current = getCurrentValue(task, metrics);
@@ -193,7 +194,8 @@ export default memo(function DailyTasksList({
             </View>
           </View>
         );
-      })}
+        })}
+      </View>
     </View>
   );
 });

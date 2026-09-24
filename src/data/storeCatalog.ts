@@ -54,6 +54,97 @@ export const appThemes: AppTheme[] = [
 // المظهر الافتراضي (المجاني) المطبّق عند أول تشغيل
 export const defaultThemeId = appThemes[0].id;
 
+// ————— أنماط العداد (حلقة التقدم اليومي) —————
+export type RingStyleKind =
+  | 'ticks'
+  | 'wave'
+  | 'solid'
+  | 'dots'
+  | 'double'
+  | 'neon'
+  | 'dash'
+  | 'pulse'
+  | 'arc';
+
+export interface RingStyle {
+  id: string;
+  name: string;
+  price: number;
+  kind: RingStyleKind;
+  accent: string;
+  premium?: boolean;
+}
+
+export const ringStyles: RingStyle[] = [
+  {
+    id: 'ticks-default',
+    name: 'الشرطات التقليدية',
+    price: 0,
+    kind: 'ticks',
+    accent: '#38BDF8',
+  },
+  {
+    id: 'wave-audio',
+    name: 'موجات الصوت',
+    price: 0,
+    kind: 'wave',
+    accent: '#F59E0B',
+  },
+  {
+    id: 'solid-soft',
+    name: 'الخط الناعم',
+    price: 75,
+    kind: 'solid',
+    accent: '#8B5CF6',
+  },
+  {
+    id: 'dots-classic',
+    name: 'المنقط العادي',
+    price: 450,
+    kind: 'dots',
+    accent: '#10B981',
+  },
+  {
+    id: 'dash-ring',
+    name: 'الخط المتقطع',
+    price: 220,
+    kind: 'dash',
+    accent: '#14B8A6',
+  },
+  {
+    id: 'double-ring',
+    name: 'الحلقة المزدوجة',
+    price: 600,
+    kind: 'double',
+    accent: '#F59E0B',
+  },
+  {
+    id: 'pulse-ring',
+    name: 'نبض التقدم',
+    price: 700,
+    kind: 'pulse',
+    accent: '#F97316',
+  },
+  {
+    id: 'arc-ring',
+    name: 'القوس الزجاجي',
+    price: 900,
+    kind: 'arc',
+    accent: '#A78BFA',
+    premium: true,
+  },
+  {
+    id: 'neon-glow',
+    name: 'النيون المتوهج',
+    price: 800,
+    kind: 'neon',
+    accent: '#F43F5E',
+    premium: true,
+  },
+];
+
+export const defaultRingStyleId = ringStyles[0].id;
+
 // ————— خلفيات البروفايل (شريط رأس الملف الشخصي) —————
 export type BadgeIconName =
   | 'footprints'
