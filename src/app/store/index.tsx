@@ -25,7 +25,6 @@ import { BadgeIcon } from '../../components/BadgeIcon';
 import { useTheme } from '../../context/ThemeContext';
 import {
   appThemes,
-  profileBanners,
   ringStyles,
   defaultThemeId,
   AppTheme,
@@ -42,7 +41,7 @@ const TABS: { key: TabKey; label: string; hint: string }[] = [
   {
     key: 'themes',
     label: 'ألوان التطبيق',
-    hint: 'تدرجات تُطبَّق على خلفية التطبيق بالكامل',
+    hint: 'تدرجات تُطبَّق على التطبيق بالكامل',
   },
   {
     key: 'rings',
@@ -125,14 +124,14 @@ const ActionButton = memo(function ActionButton({
   onPress,
   price,
   primary,
+  secondary,
 }: {
   state: 'active' | 'apply' | 'buy';
   onPress?: () => void;
   price?: number;
   primary: string;
+  secondary?: string;
 }) {
-  const { bg, border, subText } = useTheme();
-
   if (state === 'active') {
     return (
       <View>
@@ -153,6 +152,8 @@ const ActionButton = memo(function ActionButton({
         activeOpacity={0.8}
         style={{
           backgroundColor: primary,
+          borderColor: secondary ?? primary,
+          borderWidth: 1,
           paddingVertical: 10,
           borderRadius: 8,
         }}
@@ -169,7 +170,7 @@ const ActionButton = memo(function ActionButton({
       activeOpacity={0.8}
       style={{
         backgroundColor: `${primary}18`,
-        borderColor: `${primary}55`,
+        borderColor: secondary ? `${secondary}66` : `${primary}55`,
         paddingVertical: 10,
         borderRadius: 8,
       }}
@@ -223,7 +224,12 @@ const ThemeCard = memo(function ThemeCard({
         style={{ backgroundColor: card }}
       >
         <View
-          style={{ borderColor: item.accent }}
+          style={{
+            backgroundColor: item.secondaryGlow
+              ? `${item.secondaryGlow}26`
+              : `${item.accent}20`,
+            borderColor: item.secondaryGlow ?? item.accent,
+          }}
           className="w-12 h-12 rounded-full border-[3px] items-center justify-center"
         >
           <View
@@ -232,11 +238,18 @@ const ThemeCard = memo(function ThemeCard({
           />
         </View>
         <View
-          style={{ backgroundColor: `${item.accent}20` }}
+          style={{
+            backgroundColor: item.secondaryGlow
+              ? `${item.secondaryGlow}22`
+              : `${item.accent}20`,
+          }}
           className="mt-2.5 h-1.5 w-16 rounded-full overflow-hidden"
         >
           <View
-            style={{ backgroundColor: item.accent, width: '70%' }}
+            style={{
+              backgroundColor: item.secondaryGlow ?? item.accent,
+              width: '70%',
+            }}
             className="h-full rounded-full"
           />
         </View>
@@ -270,6 +283,7 @@ const ThemeCard = memo(function ThemeCard({
           }
           price={item.price}
           primary={item.accent}
+          secondary={item.secondaryGlow}
         />
       </View>
     </View>
@@ -515,25 +529,65 @@ const RingPreview = ({
           />
         </Svg>
       );
-    case 'neon':
+    case 'infinity':
       return (
-        <Svg width={72} height={72} viewBox="0 0 72 72">
+        <Svg width={72} height={72} viewBox="0 0 100 100">
           <G opacity={active ? 1 : 0.8}>
             <Circle
-              cx={center}
-              cy={center}
-              r={26}
+              cx={50}
+              cy={50}
+              r={32}
               fill="none"
               stroke={ringColor}
-              strokeWidth="5"
-              strokeDasharray="120 30"
+              strokeWidth="4"
+              opacity={0.9}
             />
             <Circle
-              cx={center}
-              cy={center}
-              r={12}
+              cx={50}
+              cy={50}
+              r={24}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="4"
+              opacity={0.75}
+            />
+            <Circle
+              cx={50}
+              cy={50}
+              r={7}
               fill={ringColor}
-              opacity={0.9}
+              opacity={active ? 1 : 0.75}
+            />
+          </G>
+        </Svg>
+      );
+    case 'dotted-flow':
+      return (
+        <Svg width={72} height={72} viewBox="0 0 100 100">
+          <G opacity={active ? 1 : 0.8}>
+            {Array.from({ length: 14 }).map((_, index) => {
+              const angle = (index / 14) * Math.PI * 2;
+              const cx = 50 + 30 * Math.cos(angle);
+              const cy = 50 + 30 * Math.sin(angle);
+              const r = 1.5 + (index / 14) * 3;
+
+              return (
+                <Circle
+                  key={index}
+                  cx={cx}
+                  cy={cy}
+                  r={r}
+                  fill={ringColor}
+                  opacity={0.25 + (index / 14) * 0.75}
+                />
+              );
+            })}
+            <Circle
+              cx={50}
+              cy={50}
+              r={8}
+              fill={ringColor}
+              opacity={active ? 1 : 0.7}
             />
           </G>
         </Svg>
@@ -726,9 +780,7 @@ export default function StoreScreen() {
   const totalCoins = useAppStore((s) => s.totalCoins);
   const activeTheme = useAppStore((s) => s.activeTheme);
   const ownedThemes = useAppStore((s) => s.ownedThemes);
-  const currentProfileBannerId = useAppStore((s) => s.currentProfileBannerId);
   const activeRingStyle = useAppStore((s) => s.activeRingStyle);
-  const ownedProfileBanners = useAppStore((s) => s.ownedProfileBanners);
   const ownedRingStyles = useAppStore((s) => s.ownedRingStyles);
   const selectStoreTheme = useAppStore((s) => s.selectStoreTheme);
   const applyProfileBanner = useAppStore((s) => s.applyProfileBanner);
@@ -822,28 +874,6 @@ export default function StoreScreen() {
     [activeTheme, ownedThemes, handleApplyTheme, handleBuyTheme]
   );
 
-  const renderBannerItem = useCallback(
-    ({ item }: { item: ProfileBanner }) => (
-      <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
-        <BannerCard
-          item={item}
-          isActive={item.id === currentProfileBannerId}
-          owned={item.price === 0 || ownedProfileBanners.includes(item.id)}
-          primary={accent}
-          onApply={handleApplyBanner}
-          onBuy={handleBuyBanner}
-        />
-      </View>
-    ),
-    [
-      currentProfileBannerId,
-      ownedProfileBanners,
-      accent,
-      handleApplyBanner,
-      handleBuyBanner,
-    ]
-  );
-
   const renderRingStyleItem = useCallback(
     ({ item }: { item: RingStyle }) => (
       <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
@@ -894,7 +924,7 @@ export default function StoreScreen() {
 
       {/* شريط التبويبات */}
       <View
-        className="mx-4 mt-3 mb-2 flex-row-reverse rounded-2xl border p-1"
+        className="mx-4 mt-4 mb-3 flex-row-reverse rounded-2xl border p-1"
         style={{ backgroundColor: card, borderColor: border }}
       >
         {TABS.map((tab) => {

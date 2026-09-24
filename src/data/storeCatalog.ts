@@ -7,6 +7,7 @@ export interface AppTheme {
   price: number;
   // اللون المميز الديناميكي الذي يُوجَّه إلى عناصر التفاعل في التطبيق
   accent: string;
+  secondaryGlow?: string;
   premium?: boolean;
 }
 
@@ -16,30 +17,35 @@ export const appThemes: AppTheme[] = [
     name: 'الافتراضي / الليل الداكن',
     price: 0,
     accent: '#38BDF8',
+    secondaryGlow: '#7DD3FC',
   },
   {
     id: 'turquoise-night',
     name: 'التركواز المتوهج',
     price: 200,
     accent: '#00D2FF',
+    secondaryGlow: '#7CEBFF',
   },
   {
     id: 'warm-sunset',
-    name: 'الغروب الدافئ',
+    name: 'الوردي النيون',
     price: 350,
-    accent: '#FF6B00',
+    accent: '#FF2A85',
+    secondaryGlow: '#FF75B5',
   },
   {
     id: 'forest-emerald',
-    name: 'الأخضر الغابوي',
+    name: 'الليموني الرياضي',
     price: 500,
-    accent: '#10B981',
+    accent: '#CCFF00',
+    secondaryGlow: '#E5FF66',
   },
   {
     id: 'royal-violet',
-    name: 'البنفسجي الملكي',
+    name: 'المرجاني المشع',
     price: 650,
-    accent: '#C084FC',
+    accent: '#FF6B4A',
+    secondaryGlow: '#FFA08B',
     premium: true,
   },
   {
@@ -47,6 +53,7 @@ export const appThemes: AppTheme[] = [
     name: 'الذهبي الفاخر',
     price: 800,
     accent: '#F59E0B',
+    secondaryGlow: '#FCD34D',
     premium: true,
   },
 ];
@@ -61,7 +68,8 @@ export type RingStyleKind =
   | 'solid'
   | 'dots'
   | 'double'
-  | 'neon'
+  | 'infinity'
+  | 'dotted-flow'
   | 'dash'
   | 'pulse'
   | 'arc';
@@ -127,17 +135,17 @@ export const ringStyles: RingStyle[] = [
   },
   {
     id: 'arc-ring',
-    name: 'القوس الزجاجي',
-    price: 900,
-    kind: 'arc',
+    name: 'المسار المتداخل',
+    price: 750,
+    kind: 'infinity',
     accent: '#A78BFA',
     premium: true,
   },
   {
     id: 'neon-glow',
-    name: 'النيون المتوهج',
-    price: 800,
-    kind: 'neon',
+    name: 'التدفق النقطي',
+    price: 850,
+    kind: 'dotted-flow',
     accent: '#F43F5E',
     premium: true,
   },

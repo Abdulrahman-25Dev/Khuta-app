@@ -8,7 +8,7 @@ import {
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import {
   Flame,
   MapPin,
@@ -494,37 +494,70 @@ export default function HomeScreen() {
           </Svg>
         );
       }
-      case 'neon': {
-        const circumference = 2 * Math.PI * 90;
-        const offset = circumference * (1 - progress);
+      case 'infinity': {
+        const loopProgress = Math.max(0.15, progress);
 
         return (
           <Svg height="240" width="240">
-            <Circle
-              cx={center}
-              cy={center}
-              r={90}
+            <Path
+              d={`M${center - 62} ${center} C ${center - 62} ${center - 42}, ${center - 28} ${center - 42}, ${center - 18} ${center} C ${center - 28} ${center + 42}, ${center - 62} ${center + 42}, ${center - 62} ${center} M ${center + 62} ${center} C ${center + 62} ${center - 42}, ${center + 28} ${center - 42}, ${center + 18} ${center} C ${center + 28} ${center + 42}, ${center + 62} ${center + 42}, ${center + 62} ${center}`}
               fill="none"
               stroke={inactiveColor}
               strokeWidth="10"
-              opacity={0.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.7}
             />
-            <Circle
-              cx={center}
-              cy={center}
-              r={90}
+            <Path
+              d={`M${center - 62} ${center} C ${center - 62} ${center - 42}, ${center - 28} ${center - 42}, ${center - 18} ${center} C ${center - 28} ${center + 42}, ${center - 62} ${center + 42}, ${center - 62} ${center} M ${center + 62} ${center} C ${center + 62} ${center - 42}, ${center + 28} ${center - 42}, ${center + 18} ${center} C ${center + 28} ${center + 42}, ${center + 62} ${center + 42}, ${center + 62} ${center}`}
               fill="none"
               stroke={activeColor}
               strokeWidth="10"
-              strokeDasharray={`${circumference} ${circumference}`}
-              strokeDashoffset={offset}
               strokeLinecap="round"
-              transform={`rotate(-90 ${center} ${center})`}
+              strokeLinejoin="round"
+              strokeDasharray={`${Math.max(20, loopProgress * 260)} 260`}
+              transform={`rotate(${progress * 60} ${center} ${center})`}
             />
             <Circle
               cx={center}
               cy={center}
-              r={18}
+              r={14}
+              fill={activeColor}
+              opacity={0.9}
+            />
+          </Svg>
+        );
+      }
+      case 'dotted-flow': {
+        const totalDots = 24;
+        const activeDots = Math.max(4, Math.round(progress * totalDots));
+
+        return (
+          <Svg height="240" width="240">
+            {Array.from({ length: totalDots }).map((_, index) => {
+              const angle = (index * 360) / totalDots - 90;
+              const rad = (angle * Math.PI) / 180;
+              const distance = 82 + (index % 6) * 5;
+              const x = center + distance * Math.cos(rad);
+              const y = center + distance * Math.sin(rad);
+              const isActive = index < activeDots;
+              const size = 2 + (index / totalDots) * 7;
+
+              return (
+                <Circle
+                  key={index}
+                  cx={x}
+                  cy={y}
+                  r={isActive ? size : 2.8}
+                  fill={isActive ? activeColor : inactiveColor}
+                  opacity={isActive ? 1 : 0.65}
+                />
+              );
+            })}
+            <Circle
+              cx={center}
+              cy={center}
+              r={14}
               fill={activeColor}
               opacity={0.9}
             />
