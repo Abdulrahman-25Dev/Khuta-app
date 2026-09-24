@@ -4,7 +4,7 @@
     "slug": "khuta-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/khutaIcon.png",
+    "icon": "./assets/images/KhutaIcon.png",
     "scheme": "khutaapp",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -17,9 +17,9 @@
       "gradleArgs": ["-Xmx4096m", "-XX:MaxMetaspaceSize=512m"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/khutaIcon.png",
-        "backgroundImage": "./assets/images/khutaIcon.png",
-        "monochromeImage": "./assets/images/khutaIcon.png"
+        "foregroundImage": "./assets/images/KhutaIcon.png",
+        "backgroundImage": "./assets/images/KhutaIcon.png",
+        "monochromeImage": "./assets/images/KhutaIcon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.dooom.khutaapp"

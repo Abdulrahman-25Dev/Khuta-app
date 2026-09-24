@@ -28,7 +28,7 @@ export default function RootLayout() {
 function RootNavigator() {
   const themeMode = useAppStore((state) => state.themeMode);
   const { colorScheme: activeScheme, setColorScheme } = useColorScheme();
-  const theme = useTheme();
+  const { isDarkMode, accent, bg, card, border, text } = useTheme();
 
   // مزامنة colorScheme الأصيلة مع المتجر عند أي اختلاف فقط (التبديل نفسه يتم في المتجر)
   useEffect(() => {
@@ -37,20 +37,20 @@ function RootNavigator() {
     }
   }, [themeMode, activeScheme, setColorScheme]);
 
-  const navBase = theme.isDark ? DarkTheme : DefaultTheme;
+  const navBase = isDarkMode ? DarkTheme : DefaultTheme;
   // سمة React Navigation الأصلية بنفس قيم لوحة المظهر حتى ترسم خلفية الشاشة
   // الأصلية وانتقالاتها متزامنة مع الكروت المخصصة دون وميض ألوان.
   const navTheme: Theme = {
     ...navBase,
-    dark: theme.isDark,
+    dark: isDarkMode,
     colors: {
       ...navBase.colors,
-      primary: theme.accent,
-      background: theme.bg,
-      card: theme.card,
-      text: theme.text,
-      border: theme.border,
-      notification: theme.accent,
+      primary: accent,
+      background: bg,
+      card,
+      text,
+      border,
+      notification: accent,
     },
   };
 
@@ -77,21 +77,21 @@ function RootNavigator() {
   return (
     <NavigationThemeProvider value={navTheme}>
       <View
-        className={theme.isDark ? 'dark flex-1' : 'flex-1'}
-        style={{ backgroundColor: theme.bg }}
+        className={isDarkMode ? 'dark flex-1' : 'flex-1'}
+        style={{ backgroundColor: bg }}
       >
         <GestureHandlerRootView className="flex-1">
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.bg },
+              contentStyle: { backgroundColor: bg },
             }}
           >
             <Stack.Screen
               name="(tabs)"
               options={{
                 headerShown: false,
-                contentStyle: { backgroundColor: theme.bg },
+                contentStyle: { backgroundColor: bg },
               }}
             />
           </Stack>

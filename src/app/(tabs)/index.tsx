@@ -6,18 +6,14 @@ import { Flame, MapPin, Clock, Footprints, Coins, Play, Pause } from 'lucide-rea
 import { Pedometer } from 'expo-sensors';
 
 import { useAppStore, getTodayKey } from '../../../store/useAppStore';
-import { appThemes } from '../../data/storeCatalog';
+import { useTheme } from '../../context/ThemeContext';
 import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
 import DailyTasksList from '../../components/DailyTasksList';
 
 export default function HomeScreen() {
-  const { themeMode, user, addCoins, totalCoins } = useAppStore();
-  const currentThemeId = useAppStore((s) => s.currentThemeId);
-  const currentTheme =
-    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
-  // لون التمييز الديناميكي من المظهر المطبّق (الخلفية والبطاقات ثابتة)
-  const accent = currentTheme.accent;
-  const isDark = themeMode === 'dark';
+  const { user, addCoins, totalCoins } = useAppStore();
+  // كامل الألوان من السياق الذرّي في نفس إطار القراءة (لا انفصال بين الخلفية والكروت)
+  const { isDarkMode, accent, bg, card, border, text, subText } = useTheme();
 
   const [steps, setSteps] = useState<number>(() => storage.getNumber('daily_steps') ?? 0);
   const goal = user?.dailyGoal ?? 5000;
@@ -233,7 +229,8 @@ export default function HomeScreen() {
     const center = 120;
     const progress = Math.min(steps / goal, 1);
     const activeTicksCount = Math.floor(progress * totalTicks);
-    const inactiveTickColor = isDark ? '#21262D' : '#CBD5E1';
+    // مسار التقدم الناقص بدرجة واضحة التباين فوق لون الكارت (#1E293B) في الوضع الداكن
+    const inactiveTickColor = isDarkMode ? '#334155' : '#CBD5E1';
 
     return Array.from({ length: totalTicks }).map((_, index) => {
       const angle = (index * (360 / totalTicks) - 90) * (Math.PI / 180);
@@ -261,7 +258,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1">
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <ScrollView 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 100 }} 
         showsVerticalScrollIndicator={false}
@@ -269,18 +266,24 @@ export default function HomeScreen() {
         
         {/* Header */}
         <View className="flex-row-reverse justify-between items-center mb-5">
-          <Text className="text-2xl font-bold text-appText-light dark:text-appText-dark">
+          <Text className="text-2xl font-bold" style={{ color: text }}>
             خُطى <Text style={{ color: accent }}>.</Text>
           </Text>
           
-          <View className="flex-row-reverse items-center bg-appCard-light dark:bg-appCard-dark px-3.5 py-2 rounded-full border border-appBorder-light dark:border-appBorder-dark gap-1.5">
+          <View
+            className="flex-row-reverse items-center px-3.5 py-2 rounded-full border gap-1.5"
+            style={{ backgroundColor: card, borderColor: border }}
+          >
             <Coins color={accent} size={18} />
-            <Text className="text-appText-light dark:text-appText-dark text-sm font-bold">{totalCoins} عملة</Text>
+            <Text className="text-sm font-bold" style={{ color: text }}>{totalCoins} عملة</Text>
           </View>
         </View>
 
         {/* Circular Gauge Card */}
-        <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl p-5 items-center border border-appBorder-light dark:border-appBorder-dark mb-5">
+        <View
+          className="rounded-3xl p-5 items-center border mb-5"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
           <View className="w-60 h-60 justify-center items-center relative">
             <Svg height="240" width="240">
               {renderTicks()}
@@ -288,8 +291,8 @@ export default function HomeScreen() {
             
             <View className="absolute items-center">
               <Footprints color={accent} size={28} style={{ marginBottom: 4 }} />
-              <Text className="text-sm text-appSubText-light dark:text-appSubText-dark">خطوات اليوم</Text>
-              <Text className="text-4xl font-black text-appText-light dark:text-appText-dark my-0.5">
+              <Text className="text-sm" style={{ color: subText }}>خطوات اليوم</Text>
+              <Text className="text-4xl font-black my-0.5" style={{ color: text }}>
                 {steps.toLocaleString('en-US')}
               </Text>
               {pedometerStatus ? (
@@ -306,8 +309,8 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={toggleTracking}
-                style={{ borderColor: accent }}
-                className="w-14 h-14 rounded-full bg-appBg-light dark:bg-appBg-dark border-2 items-center justify-center shadow-lg"
+                style={{ borderColor: accent, backgroundColor: bg }}
+                className="w-14 h-14 rounded-full border-2 items-center justify-center shadow-lg"
               >
                 <View 
                   style={{ backgroundColor: `${accent}20` }}
@@ -324,31 +327,34 @@ export default function HomeScreen() {
           </View>
 
           {/* Metrics Row */}
-          <View className="flex-row-reverse w-full justify-around items-center mt-8 pt-4 border-t border-appBorder-light dark:border-appBorder-dark">
+          <View
+            className="flex-row-reverse w-full justify-around items-center mt-8 pt-4 border-t"
+            style={{ borderTopColor: border }}
+          >
             <View className="items-center">
               <MapPin color={accent} size={20} />
-              <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{distanceKm}</Text>
-              <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">مسافة (كم)</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: text }}>{distanceKm}</Text>
+              <Text className="text-xs mt-0.5" style={{ color: subText }}>مسافة (كم)</Text>
             </View>
 
-            <View className="w-px h-7 bg-appBorder-light dark:bg-appBorder-dark" />
+            <View className="w-px h-7" style={{ backgroundColor: border }} />
 
             <View className="items-center">
               <Clock color={accent} size={20} />
-              <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">
+              <Text className="text-lg font-bold mt-1.5" style={{ color: text }}>
                 {formatTime(secondsElapsed)}
               </Text>
-              <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">
+              <Text className="text-xs mt-0.5" style={{ color: subText }}>
                 {isTracking ? 'وقت نشط 🟢' : 'وقت'}
               </Text>
             </View>
 
-            <View className="w-px h-7 bg-appBorder-light dark:bg-appBorder-dark" />
+            <View className="w-px h-7" style={{ backgroundColor: border }} />
 
             <View className="items-center">
               <Flame color={accent} size={20} />
-              <Text className="text-lg font-bold text-appText-light dark:text-appText-dark mt-1.5">{calories.toLocaleString('en-US')}</Text>
-              <Text className="text-xs text-appSubText-light dark:text-appSubText-dark mt-0.5">سعرات</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: text }}>{calories.toLocaleString('en-US')}</Text>
+              <Text className="text-xs mt-0.5" style={{ color: subText }}>سعرات</Text>
             </View>
           </View>
         </View>

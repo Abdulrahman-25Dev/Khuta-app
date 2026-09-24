@@ -53,8 +53,8 @@ export default memo(function DailyTasksList({
   currentMinutes = 0,
 }: DailyTasksListProps) {
   const { dailyTasks, completeTask } = useAppStore();
-  // لون التمييز يُقرأ من سياق المظهر الذرّي مباشرةً (لا useState/useEffect مؤجلة)
-  const { accent } = useTheme();
+  // ألوان الأسطح والنصوص من السياق الذرّي مباشرةً (لا useState/useEffect مؤجلة)
+  const { accent, card, border, text, subText } = useTheme();
   const metrics: DailyTasksListProps = {
     currentSteps,
     currentDistanceKm,
@@ -79,10 +79,13 @@ export default memo(function DailyTasksList({
   ]);
 
   return (
-    <View className="bg-appCard-light dark:bg-appCard-dark rounded-3xl p-5 border border-appBorder-light dark:border-appBorder-dark">
+    <View
+      className="rounded-3xl p-5 border"
+      style={{ backgroundColor: card, borderColor: border }}
+    >
       <View className="flex-row-reverse items-center gap-2 mb-2">
         <ListChecks color={accent} size={22} />
-        <Text className="text-lg font-bold text-appText-light dark:text-appText-dark">
+        <Text className="text-lg font-bold" style={{ color: text }}>
           مهام اليوم
         </Text>
       </View>
@@ -102,7 +105,8 @@ export default memo(function DailyTasksList({
         return (
           <View
             key={task.id}
-            className={`py-3 ${isLast ? '' : 'border-b border-appBorder-light dark:border-appBorder-dark'}`}
+            className={`py-3 ${isLast ? '' : 'border-b'}`}
+            style={isLast ? undefined : { borderBottomColor: border }}
           >
             <View className="flex-row-reverse items-center justify-between gap-3">
               <View
@@ -113,11 +117,11 @@ export default memo(function DailyTasksList({
               </View>
 
               <View className="flex-1">
-                <Text className="text-appText-light dark:text-appText-dark text-sm font-bold text-right">
+                <Text className="text-sm font-bold text-right" style={{ color: text }}>
                   {task.title}
                 </Text>
                 <View className="flex-row-reverse items-center justify-end gap-1.5 mt-1">
-                  <Text className="text-appSubText-light dark:text-appSubText-dark text-xs text-right">
+                  <Text className="text-xs text-right" style={{ color: subText }}>
                     {task.target.toLocaleString('en-US')} {task.unit}
                   </Text>
                   <View
@@ -158,7 +162,10 @@ export default memo(function DailyTasksList({
 
             {/* شريط التقدم */}
             <View className="mt-3" style={{ direction: 'rtl' }}>
-              <View className="h-1.5 rounded-full bg-appBorder-light dark:bg-appBorder-dark overflow-hidden">
+              <View
+                className="h-1.5 rounded-full overflow-hidden"
+                style={{ backgroundColor: border }}
+              >
                 <View
                   style={{
                     width: `${progress}%`,
@@ -180,7 +187,7 @@ export default memo(function DailyTasksList({
                   +{task.coins} عملة
                 </Text>
               </View>
-              <Text className="text-appSubText-light dark:text-appSubText-dark text-[11px] font-bold">
+              <Text className="text-[11px] font-bold" style={{ color: subText }}>
                 {done ? 'اكتمل!' : `${progress}%`}
               </Text>
             </View>

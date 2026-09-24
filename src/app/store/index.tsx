@@ -26,12 +26,17 @@ import {
 
 import { useAppStore } from '../../../store/useAppStore';
 import { BadgeIcon } from '../../components/BadgeIcon';
+import { useTheme } from '../../context/ThemeContext';
 import {
   appThemes,
   profileBanners,
+  defaultThemeId,
   AppTheme,
   ProfileBanner,
 } from '../../data/storeCatalog';
+
+// المظهر الافتراضي غير قابل للشراء أو التبديل: يُخفى من شريط المتجر
+const shopThemes = appThemes.filter((t) => t.id !== defaultThemeId);
 
 type TabKey = 'themes' | 'banners';
 
@@ -53,15 +58,21 @@ type BadgeType = 'active' | 'premium' | 'locked';
 const formatNumber = (n: number) => n.toLocaleString('en-US');
 
 // ————— مكونات ثابتة معزولة لمنع إعادة الرسم أثناء تحديثات الحالة الأخرى —————
+// كل مكوّن يسحب ألوان الأسطح من السياق الذرّي (نفس إطار قراءة الخلفية).
 
 // شارة الحالة: علامة للمفعّل، تاج للمميزة، قفل للمقفلة
 const StatusBadge = memo(function StatusBadge({ type }: { type: BadgeType }) {
+  const { bg, border } = useTheme();
   const wrap =
     type === 'active'
       ? 'bg-emerald-500'
       : type === 'premium'
         ? 'bg-amber-400'
-        : 'bg-appBg-light dark:bg-appBg-dark border border-appBorder-light dark:border-appBorder-dark';
+        : 'border';
+  const wrapStyle =
+    type === 'active' || type === 'premium'
+      ? undefined
+      : { backgroundColor: bg, borderColor: border };
   const icon =
     type === 'active' ? (
       <Check color="#FFFFFF" size={12} strokeWidth={3} />
@@ -74,6 +85,7 @@ const StatusBadge = memo(function StatusBadge({ type }: { type: BadgeType }) {
   return (
     <View
       className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full items-center justify-center ${wrap}`}
+      style={wrapStyle}
     >
       {icon}
     </View>
@@ -92,11 +104,16 @@ const ActionButton = memo(function ActionButton({
   price?: number;
   primary: string;
 }) {
+  const { bg, border, subText } = useTheme();
+
   if (state === 'active') {
     return (
-      <View className="rounded-xl py-2.5 items-center opacity-60 bg-appBg-light dark:bg-appBg-dark border border-appBorder-light dark:border-appBorder-dark flex-row justify-center gap-1">
+      <View
+        className="rounded-xl py-2.5 items-center opacity-60 flex-row justify-center gap-1 border"
+        style={{ backgroundColor: bg, borderColor: border }}
+      >
         <Check color="#22C55E" size={14} strokeWidth={3} />
-        <Text className="text-appSubText-light dark:text-appSubText-dark font-bold text-sm">
+        <Text className="font-bold text-sm" style={{ color: subText }}>
           نشط
         </Text>
       </View>
@@ -108,8 +125,8 @@ const ActionButton = memo(function ActionButton({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.8}
-        style={{ backgroundColor: primary }}
-        className="rounded-xl py-2.5 items-center"
+        style={{ backgroundColor: primary, paddingVertical: 10, borderRadius: 8 }}
+        className="items-center"
       >
         <Text className="text-white font-bold text-sm">تطبيق</Text>
       </TouchableOpacity>
@@ -123,12 +140,14 @@ const ActionButton = memo(function ActionButton({
       style={{
         backgroundColor: `${primary}18`,
         borderColor: `${primary}55`,
+        paddingVertical: 10,
+        borderRadius: 8,
       }}
-      className="rounded-xl py-2.5 items-center border flex-row justify-center gap-1"
+      className="items-center border flex-row justify-center gap-1"
     >
       <Coins color={primary} size={14} />
       <Text style={{ color: primary }} className="font-bold text-sm">
-        شراء: {formatNumber(price ?? 0)}
+        شراء {formatNumber(price ?? 0)}
       </Text>
     </TouchableOpacity>
   );
@@ -148,6 +167,7 @@ const ThemeCard = memo(function ThemeCard({
   onApply: (id: string) => void;
   onBuy: (item: AppTheme, price: number) => void;
 }) {
+  const { card, border, text } = useTheme();
   const badge: BadgeType | undefined = isActive
     ? 'active'
     : !owned
@@ -157,9 +177,20 @@ const ThemeCard = memo(function ThemeCard({
       : undefined;
 
   return (
-    <View className="flex-1 bg-appCard-light dark:bg-appCard-dark rounded-3xl border border-appBorder-light dark:border-appBorder-dark p-2">
+    <View
+      className="flex-1 rounded-3xl border"
+      style={{
+        backgroundColor: card,
+        borderColor: border,
+        overflow: 'hidden',
+        padding: 8,
+      }}
+    >
       {/* معاينة لون التمييز فوق الخلفية الداكنة الثابتة */}
-      <View className="relative h-24 rounded-2xl overflow-hidden bg-appCard-light dark:bg-appCard-dark items-center justify-center">
+      <View
+        className="relative h-24 rounded-2xl overflow-hidden items-center justify-center"
+        style={{ backgroundColor: card }}
+      >
         <View
           style={{ borderColor: item.accent }}
           className="w-12 h-12 rounded-full border-[3px] items-center justify-center"
@@ -181,7 +212,7 @@ const ThemeCard = memo(function ThemeCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className="text-appText-light dark:text-appText-dark text-xs font-bold text-right">
+        <Text className="text-xs font-bold text-right" style={{ color: text }}>
           {item.name}
         </Text>
         {!owned && (
@@ -193,18 +224,21 @@ const ThemeCard = memo(function ThemeCard({
           </View>
         )}
       </View>
-      <ActionButton
-        state={isActive ? 'active' : owned ? 'apply' : 'buy'}
-        onPress={
-          isActive
-            ? undefined
-            : owned
-              ? () => onApply(item.id)
-              : () => onBuy(item, item.price)
-        }
-        price={item.price}
-        primary={item.accent}
-      />
+      {/* حاوية الزر بها حشوة سفلية واضحة فلا يتداخل زر الشراء مع الصفوف التالية */}
+      <View className="px-1 pb-1">
+        <ActionButton
+          state={isActive ? 'active' : owned ? 'apply' : 'buy'}
+          onPress={
+            isActive
+              ? undefined
+              : owned
+                ? () => onApply(item.id)
+                : () => onBuy(item, item.price)
+          }
+          price={item.price}
+          primary={item.accent}
+        />
+      </View>
     </View>
   );
 });
@@ -225,6 +259,7 @@ const BannerCard = memo(function BannerCard({
   onApply: (id: string) => void;
   onBuy: (item: ProfileBanner, price: number) => void;
 }) {
+  const { card, border, text } = useTheme();
   const badge: BadgeType | undefined = isActive
     ? 'active'
     : !owned
@@ -234,7 +269,15 @@ const BannerCard = memo(function BannerCard({
       : undefined;
 
   return (
-    <View className="flex-1 bg-appCard-light dark:bg-appCard-dark rounded-3xl border border-appBorder-light dark:border-appBorder-dark p-2">
+    <View
+      className="flex-1 rounded-3xl border"
+      style={{
+        backgroundColor: card,
+        borderColor: border,
+        overflow: 'hidden',
+        padding: 8,
+      }}
+    >
       {/* محاكاة مصغّرة لرأس البروفايل: شريط التدرج مع صورة دائرية متراكبة عليه */}
       <View className="relative h-24 rounded-2xl overflow-hidden">
         <LinearGradient
@@ -243,11 +286,11 @@ const BannerCard = memo(function BannerCard({
           end={{ x: 0, y: 1 }}
           className="h-14 w-full"
         />
-        <View className="absolute left-0 right-0 bottom-0 h-10 bg-appCard-light dark:bg-appCard-dark" />
+        <View className="absolute left-0 right-0 bottom-0 h-10" style={{ backgroundColor: card }} />
         {/* صورة البروفايل الدائرية متراكبة على حد الشريط السفلي */}
         <View
-          style={{ marginLeft: -18 }}
-          className="absolute left-1/2 top-[38px] w-9 h-9 rounded-full bg-appCard-light dark:bg-appCard-dark border-2 border-appBorder-light dark:border-appBorder-dark items-center justify-center"
+          style={{ marginLeft: -18, backgroundColor: card, borderColor: border }}
+          className="absolute left-1/2 top-[38px] w-9 h-9 rounded-full border-2 items-center justify-center"
         >
           <User color="#94A3B8" size={14} />
         </View>
@@ -258,7 +301,7 @@ const BannerCard = memo(function BannerCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className="text-appText-light dark:text-appText-dark text-xs font-bold text-right">
+        <Text className="text-xs font-bold text-right" style={{ color: text }}>
           {item.name}
         </Text>
         {!owned && (
@@ -270,18 +313,21 @@ const BannerCard = memo(function BannerCard({
           </View>
         )}
       </View>
-      <ActionButton
-        state={isActive ? 'active' : owned ? 'apply' : 'buy'}
-        onPress={
-          isActive
-            ? undefined
-            : owned
-              ? () => onApply(item.id)
-              : () => onBuy(item, item.price)
-        }
-        price={item.price}
-        primary={primary}
-      />
+      {/* حاوية الزر بها حشوة سفلية واضحة فلا يتداخل زر الشراء مع الصفوف التالية */}
+      <View className="px-1 pb-1">
+        <ActionButton
+          state={isActive ? 'active' : owned ? 'apply' : 'buy'}
+          onPress={
+            isActive
+              ? undefined
+              : owned
+                ? () => onApply(item.id)
+                : () => onBuy(item, item.price)
+          }
+          price={item.price}
+          primary={primary}
+        />
+      </View>
     </View>
   );
 });
@@ -296,27 +342,23 @@ export default function StoreScreen() {
 
   // اشتراكات انتقائية: قراءة كل حقل على حدة حتى لا يُعاد رسم الشاشة عند تغيير
   // أي جزء آخر لا يهم المتجر (مثل الخطوات أو المهام).
-  const themeMode = useAppStore((s) => s.themeMode);
   const totalCoins = useAppStore((s) => s.totalCoins);
-  const currentThemeId = useAppStore((s) => s.currentThemeId);
+  const activeTheme = useAppStore((s) => s.activeTheme);
   const ownedThemes = useAppStore((s) => s.ownedThemes);
   const currentProfileBannerId = useAppStore((s) => s.currentProfileBannerId);
   const ownedProfileBanners = useAppStore((s) => s.ownedProfileBanners);
-  const applyTheme = useAppStore((s) => s.applyTheme);
+  const selectStoreTheme = useAppStore((s) => s.selectStoreTheme);
   const applyProfileBanner = useAppStore((s) => s.applyProfileBanner);
   const purchaseTheme = useAppStore((s) => s.purchaseTheme);
   const purchaseProfileBanner = useAppStore((s) => s.purchaseProfileBanner);
 
-  const isDark = themeMode === 'dark';
-  // اللون المميز للمظهر المطبّق حاليًا (يُستخدم لهيكل المتجر وأزرار الخلفيات)
-  const currentTheme =
-    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
-  const accent = currentTheme.accent;
+  // ألوان الأسطح والتمييز من السياق الذرّي في نفس إطار القراءة
+  const { isDarkMode, accent, card, border, text, subText } = useTheme();
 
   // ————— معالجات الأعمال (مثبتة بـ useCallback، بلا حلقة إعادة رسم) —————
   const handleApplyTheme = useCallback(
-    (id: string) => applyTheme(id),
-    [applyTheme]
+    (id: string) => selectStoreTheme(id),
+    [selectStoreTheme]
   );
 
   const handleApplyBanner = useCallback(
@@ -359,14 +401,16 @@ export default function StoreScreen() {
       <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
         <ThemeCard
           item={item}
-          isActive={item.id === currentThemeId}
+          isActive={
+            activeTheme.kind === 'store' && activeTheme.themeId === item.id
+          }
           owned={item.price === 0 || ownedThemes.includes(item.id)}
           onApply={handleApplyTheme}
           onBuy={handleBuyTheme}
         />
       </View>
     ),
-    [currentThemeId, ownedThemes, handleApplyTheme, handleBuyTheme]
+    [activeTheme, ownedThemes, handleApplyTheme, handleBuyTheme]
   );
 
   const renderBannerItem = useCallback(
@@ -395,33 +439,40 @@ export default function StoreScreen() {
 
   return (
     <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-        {/* الرأس: زر العودة + العنوان + رصيد العملات */}
+        {/* الرأس: رصيد العملات يميناً، زر العودة يساراً، والعنوان في المنتصف */}
         <View className="relative flex-row items-center justify-center py-3 px-4">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            activeOpacity={0.8}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            className="absolute left-4 w-9 h-9 rounded-full bg-appCard-light dark:bg-appCard-dark border border-appBorder-light dark:border-appBorder-dark items-center justify-center"
+          <View
+            className="absolute left-4 flex-row-reverse items-center gap-1 border px-3 py-1.5 rounded-full"
+            style={{ backgroundColor: card, borderColor: border }}
           >
-            <ChevronRight color={accent} size={20} />
-          </TouchableOpacity>
-
-          <Text className="text-appText-light dark:text-appText-dark text-base font-black">
-            متجر المظهر
-          </Text>
-
-          <View className="absolute right-4 flex-row-reverse items-center gap-1 bg-appCard-light dark:bg-appCard-dark border border-appBorder-light dark:border-appBorder-dark px-3 py-1.5 rounded-full">
             <Coins color={accent} size={15} />
             <Text style={{ color: accent }} className="text-sm font-black">
               {formatNumber(totalCoins)}
             </Text>
           </View>
+
+          <Text className="text-base font-black" style={{ color: text }}>
+            متجر المظهر
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            className="absolute right-4 w-9 h-9 rounded-full border items-center justify-center"
+            style={{ backgroundColor: card, borderColor: border }}
+          >
+            <ChevronRight color={accent} size={20} />
+          </TouchableOpacity>
         </View>
 
         {/* شريط التبويبات */}
-        <View className="mx-4 mb-2 flex-row-reverse bg-appCard-light dark:bg-appCard-dark rounded-2xl border border-appBorder-light dark:border-appBorder-dark p-1">
+        <View
+          className="mx-4 mb-2 flex-row-reverse rounded-2xl border p-1"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             return (
@@ -433,7 +484,8 @@ export default function StoreScreen() {
                 className="flex-1 py-2 rounded-xl items-center"
               >
                 <Text
-                  className={`text-sm font-bold ${isActive ? 'text-white' : 'text-appSubText-light dark:text-appSubText-dark'}`}
+                  className="text-sm font-bold"
+                  style={{ color: isActive ? '#FFFFFF' : subText }}
                 >
                   {tab.label}
                 </Text>
@@ -442,7 +494,7 @@ export default function StoreScreen() {
           })}
         </View>
 
-        <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold text-center mb-3 px-6">
+        <Text className="text-xs font-bold text-center mb-3 px-6" style={{ color: subText }}>
           {activeTabData?.hint}
         </Text>
 
@@ -451,7 +503,7 @@ export default function StoreScreen() {
           <RtlGrid>
             <FlatList<AppTheme>
               key="themes"
-              data={appThemes}
+              data={shopThemes}
               keyExtractor={(item) => item.id}
               numColumns={2}
               columnWrapperStyle={{ gap: 12 }}

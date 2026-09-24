@@ -16,8 +16,10 @@ import {
   cancelEveningReminder,
 } from '../src/services/notificationService';
 import {
+  appThemes,
   defaultThemeId,
   defaultBannerId,
+  type AppTheme,
 } from '../src/data/storeCatalog';
 
 const storage = createMMKV();
@@ -30,6 +32,56 @@ const zustandStorage = {
 
 export type ThemeMode = 'dark' | 'light';
 export type AccentColor = 'sunset' | 'forest' | 'ocean' | 'violet' | 'maroon';
+
+// المصدر النشط الموحّد للون التمييز: إمّا مظهر من المتجر أو لون افتراضي.
+// هذه الحالة الواحدة تتحكّم في الاسم واللون الظاهرين في كل شاشات التطبيق.
+export type ActiveTheme =
+  | { kind: 'store'; themeId: string }
+  | { kind: 'profile'; color: AccentColor };
+
+// نتيجة حَلّ المظهر النشط: اسم ولون المصدر الحالي (متجر أو لون افتراضي)
+export interface ResolvedTheme {
+  id: string;
+  name: string;
+  accent: string;
+  kind: ActiveTheme['kind'];
+  isStoreTheme: boolean;
+}
+
+// ذاكرة مؤقتة للكائنات المُحلَّلة: إعادة نفس المرجع لنفس كائن activeTheme تُبقي
+// مقارنة useShallow المتساوية فعّالة، وتمنع الحلقات اللانهائية في إعادة الرسم.
+const resolvedThemeCache = new WeakMap<ActiveTheme, ResolvedTheme>();
+
+// حَلّ المصدر النشط إلى قيم قابلة للاستهلاك (الاسم/اللون/النوع) دفعة واحدة
+export const resolveActiveTheme = (activeTheme: ActiveTheme): ResolvedTheme => {
+  const cached = resolvedThemeCache.get(activeTheme);
+  if (cached) return cached;
+
+  let resolved: ResolvedTheme;
+  if (activeTheme.kind === 'store') {
+    const theme =
+      appThemes.find((t) => t.id === activeTheme.themeId) ?? appThemes[0];
+    resolved = {
+      id: theme.id,
+      name: theme.name,
+      accent: theme.accent,
+      kind: 'store',
+      isStoreTheme: true,
+    };
+  } else {
+    const palette = colorPalettes[activeTheme.color];
+    resolved = {
+      id: activeTheme.color,
+      name: palette.name,
+      accent: palette.primary,
+      kind: 'profile',
+      isStoreTheme: false,
+    };
+  }
+
+  resolvedThemeCache.set(activeTheme, resolved);
+  return resolved;
+};
 
 export const getTodayKey = () => {
   const d = new Date();
@@ -84,10 +136,8 @@ export interface DailyLog {
 
 interface AppState {
   themeMode: ThemeMode;
-  accentColor: AccentColor;
   toggleTheme: () => void;
   setTheme: (mode: ThemeMode) => void;
-  setAccentColor: (color: AccentColor) => void;
 
   user: UserProfile;
   updateUser: (newData: Partial<UserProfile>) => void;
@@ -120,13 +170,16 @@ interface AppState {
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
 
-  // متجر المظهر: مظهر التطبيق الحالي وخلفية البروفايل النشطة + المكتبات المملوكة
-  currentThemeId: string;
+  // متجر المظهر: المظهر الموحّد النشط وخلفية البروفايل النشطة + المكتبات المملوكة
+  activeTheme: ActiveTheme;
   currentProfileBannerId: string;
   ownedThemes: string[];
   ownedProfileBanners: string[];
-  // تطبيق مظهر/خلفية مملوك (بدون خصم عملات)
-  applyTheme: (id: string) => void;
+  // تطبيق مظهر من المتجر وإلغاء تفعيل أي لون افتراضي نشط
+  selectStoreTheme: (theme: AppTheme | string) => void;
+  // اختيار لون افتراضي: يُطبَّق لونه ويُلغى تفعيل أي مظهر من المتجر
+  selectProfileTheme: (color: AccentColor) => void;
+  // تطبيق خلفية بروفايل مملوكة (بدون خصم عملات)
   applyProfileBanner: (id: string) => void;
   // شراء مظهر/خلفية: خصم العملات وإضافتها للمكتبة، وتُعيد true عند نجاح العملية
   purchaseTheme: (id: string, price: number) => boolean;
@@ -137,7 +190,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       themeMode: 'dark',
-      accentColor: 'sunset',
+      activeTheme: { kind: 'store', themeId: defaultThemeId },
 
       toggleTheme: () => {
         const next = get().themeMode === 'dark' ? 'light' : 'dark';
@@ -148,7 +201,6 @@ export const useAppStore = create<AppState>()(
         colorScheme.set(mode);
         set({ themeMode: mode });
       },
-      setAccentColor: (color) => set({ accentColor: color }),
 
       user: {
         name: 'عبدالرحمن',
@@ -284,11 +336,21 @@ export const useAppStore = create<AppState>()(
 
       // ————— متجر المظهر —————
       // المظهر وخلفية البروفايل الافتراضيان (المجانيان) مطبّقان ومملوكان منذ البداية
-      currentThemeId: defaultThemeId,
       currentProfileBannerId: defaultBannerId,
       ownedThemes: [defaultThemeId],
       ownedProfileBanners: [defaultBannerId],
-      applyTheme: (id) => set({ currentThemeId: id }),
+      // تطبيق مظهر من المتجر: يُثبّت المصدر النشط على مظهر المتجر،
+      // فتُلغى تلقائياً أي علامة اختيار على الألوان الافتراضية في شاشة الملف.
+      selectStoreTheme: (theme) => {
+        const id = typeof theme === 'string' ? theme : theme.id;
+        if (!appThemes.some((t) => t.id === id)) return;
+        set({ activeTheme: { kind: 'store', themeId: id } });
+      },
+      // اختيار لون افتراضي: يُطبَّق لونه ويُطوى أي مظهر من المتجر (يُعتبر غير فعّال)
+      selectProfileTheme: (color) => {
+        if (!colorPalettes[color]) return;
+        set({ activeTheme: { kind: 'profile', color } });
+      },
       applyProfileBanner: (id) => set({ currentProfileBannerId: id }),
       purchaseTheme: (id, price) => {
         const state = get();
@@ -324,7 +386,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 4,
+      version: 5,
       onRehydrateStorage: () => (state) => {
         state?.refreshDailyTasks();
       },
@@ -332,7 +394,7 @@ export const useAppStore = create<AppState>()(
       // لضمان بقاء الرصيد المتراكم محفوظاً عبر إعادة فتح التطبيق وعبر الأيام.
       partialize: (state) => ({
         themeMode: state.themeMode,
-        accentColor: state.accentColor,
+        activeTheme: state.activeTheme,
         user: state.user,
         streakDays: state.streakDays,
         totalCoins: state.totalCoins,
@@ -341,16 +403,17 @@ export const useAppStore = create<AppState>()(
         dailyTasks: state.dailyTasks,
         tasksDate: state.tasksDate,
         notificationsEnabled: state.notificationsEnabled,
-        currentThemeId: state.currentThemeId,
         currentProfileBannerId: state.currentProfileBannerId,
         ownedThemes: state.ownedThemes,
         ownedProfileBanners: state.ownedProfileBanners,
       }),
       migrate: (persistedState) => {
-        const persisted = (persistedState ?? {}) as Partial<AppState>;
+        const persisted = (persistedState ?? {}) as Partial<AppState> & {
+          currentThemeId?: string;
+          accentColor?: AccentColor;
+        };
         const fallback = {
           themeMode: 'dark' as ThemeMode,
-          accentColor: 'sunset' as AccentColor,
           user: {
             name: 'عبدالرحمن',
             weight: 70,
@@ -364,15 +427,29 @@ export const useAppStore = create<AppState>()(
           dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
           tasksDate: getTodayKey(),
           notificationsEnabled: true,
-          currentThemeId: defaultThemeId,
+          activeTheme: { kind: 'store', themeId: defaultThemeId } as ActiveTheme,
           currentProfileBannerId: defaultBannerId,
           ownedThemes: [defaultThemeId],
           ownedProfileBanners: [defaultBannerId],
         };
+        // التوافق مع النسخ القديمة (التي خزّنت currentThemeId/accentColor منفصلين):
+        // ننقل المظهر المطبّق إلى المصدر الموحّد activeTheme تلقائياً
+        const legacyActiveTheme: ActiveTheme = persisted.activeTheme ?? {
+          kind: 'store',
+          themeId: persisted.currentThemeId ?? defaultThemeId,
+        };
+        // نستبعد الحقلين القديمين حتى لا يبقيا معلقين على حالة المتجر بعد الترحيل
+        const {
+          currentThemeId: _legacyThemeId,
+          accentColor: _legacyAccentColor,
+          ...rest
+        } = persisted;
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,
-          ...persisted,
+          ...rest,
+          // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
+          activeTheme: legacyActiveTheme,
           // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
           dailyTasks: (persisted.dailyTasks ?? fallback.dailyTasks).map(
             (task) => ({

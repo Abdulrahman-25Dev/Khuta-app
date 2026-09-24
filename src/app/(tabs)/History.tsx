@@ -3,11 +3,8 @@ import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
 import { Footprints } from 'lucide-react-native';
-import {
-  useAppStore,
-  DailyLog,
-} from '../../../store/useAppStore';
-import { appThemes } from '../../data/storeCatalog';
+import { useAppStore, DailyLog } from '../../../store/useAppStore';
+import { useTheme } from '../../context/ThemeContext';
 
 const DAYS_AR = ['أح', 'إث', 'ثلا', 'أرب', 'خم', 'جم', 'سب'];
 
@@ -60,18 +57,14 @@ const getLongestStreak = (history: DailyLog[]) => {
 };
 
 const History = () => {
-  const { themeMode, history } = useAppStore();
-  const currentThemeId = useAppStore((s) => s.currentThemeId);
-  const currentTheme =
-    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
-  // لون التمييز الديناميكي من المظهر المطبّق
-  const accent = currentTheme.accent;
-  const isDark = themeMode === 'dark';
+  const { history } = useAppStore();
+  // الألوان من السياق الذرّي: لون التمييز + أسطح الكروت والنصوص في نفس الإطار
+  const { accent, bg, card, border, text, subText } = useTheme();
 
-  // ألوان الرسم البياني والنصوص الديناميكية
-  const labelTextColor = isDark ? '#F0F6FC' : '#0F172A';
-  const subTextColor = isDark ? '#8B949E' : '#64748B';
-  const gridBorderColor = isDark ? '#21262D' : '#E2E8F0';
+  // ألوان الرسم البياني الشعاعية متزامنة مع لوحة السياق نفسها
+  const labelTextColor = text;
+  const subTextColor = subText;
+  const gridBorderColor = border;
 
   // آخر 7 أيام من سجل المتجر
   const logsByDate = new Map(history.map((log) => [log.date, log]));
@@ -115,8 +108,11 @@ const History = () => {
     <SafeAreaView className="flex-1 px-5">
       {/* 1. كروت الإحصائيات العلوية */}
       <View className="flex-row-reverse justify-between mb-5 gap-2 mt-5 ">
-        <View className="flex-1 bg-appCard-light dark:bg-appCard-dark p-3 rounded-2xl items-center border border-appBorder-light dark:border-appBorder-dark">
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-xs">
+        <View
+          className="flex-1 p-3 rounded-2xl items-center border"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <Text className="text-xs" style={{ color: subText }}>
             اليوم
           </Text>
           <Text
@@ -125,13 +121,16 @@ const History = () => {
           >
             {formatCompact(todaySteps)}
           </Text>
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px]">
+          <Text className="text-[10px]" style={{ color: subText }}>
             خطوة
           </Text>
         </View>
 
-        <View className="flex-1 bg-appCard-light dark:bg-appCard-dark p-3 rounded-2xl items-center border border-appBorder-light dark:border-appBorder-dark">
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-xs">
+        <View
+          className="flex-1 p-3 rounded-2xl items-center border"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <Text className="text-xs" style={{ color: subText }}>
             المتوسط
           </Text>
           <Text
@@ -140,13 +139,16 @@ const History = () => {
           >
             {formatCompact(weekAverage)}
           </Text>
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px]">
+          <Text className="text-[10px]" style={{ color: subText }}>
             خطوة/يوم
           </Text>
         </View>
 
-        <View className="flex-1 bg-appCard-light dark:bg-appCard-dark p-3 rounded-2xl items-center border border-appBorder-light dark:border-appBorder-dark">
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-xs">
+        <View
+          className="flex-1 p-3 rounded-2xl items-center border"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <Text className="text-xs" style={{ color: subText }}>
             المجموع
           </Text>
           <Text
@@ -155,15 +157,18 @@ const History = () => {
           >
             {formatCompact(weekTotal)}
           </Text>
-          <Text className="text-appSubText-light dark:text-appSubText-dark text-[10px]">
+          <Text className="text-[10px]" style={{ color: subText }}>
             الأسبوع
           </Text>
         </View>
       </View>
 
       {/* 2. كارت الرسم البياني */}
-      <View className="bg-appCard-light dark:bg-appCard-dark p-4 rounded-3xl border border-appBorder-light dark:border-appBorder-dark mb-5">
-        <Text className="text-appText-light dark:text-appText-dark text-base font-bold mb-5 text-right">
+      <View
+        className="p-4 rounded-3xl border mb-5"
+        style={{ backgroundColor: card, borderColor: border }}
+      >
+        <Text className="text-base font-bold mb-5 text-right" style={{ color: text }}>
           الخطوات الأسبوعية
         </Text>
 
@@ -193,28 +198,34 @@ const History = () => {
       </View>
 
       {/* 3. قسم السلسلة (الستريك) */}
-      <View className="bg-appCard-light dark:bg-appCard-dark p-5 rounded-3xl border border-appBorder-light dark:border-appBorder-dark mb-10">
+      <View
+        className="p-5 rounded-3xl border mb-10"
+        style={{ backgroundColor: card, borderColor: border }}
+      >
         <View className="flex-row-reverse justify-between items-center my-2">
           <View className="items-end">
-            <Text className="text-appSubText-light dark:text-appSubText-dark text-xs font-bold mb-1">
+            <Text className="text-xs font-bold mb-1" style={{ color: subText }}>
               السلسلة الحالية
             </Text>
             <View className="flex-row-reverse items-baseline gap-1">
-              <Text className="text-appText-light dark:text-appText-dark text-4xl font-extrabold">
+              <Text className="text-4xl font-extrabold" style={{ color: text }}>
                 {currentStreak}
               </Text>
-              <Text className="text-appText-light dark:text-appText-dark text-xl font-bold">
+              <Text className="text-xl font-bold" style={{ color: text }}>
                 أيام
               </Text>
             </View>
           </View>
 
-          <View className="w-16 h-16 rounded-full bg-appBg-light dark:bg-appBg-dark justify-center items-center border border-appBorder-light dark:border-appBorder-dark">
+          <View
+            className="w-16 h-16 rounded-full justify-center items-center border"
+            style={{ backgroundColor: bg, borderColor: border }}
+          >
             <Footprints color={accent} size={28} />
           </View>
         </View>
 
-        <Text className="text-appSubText-light dark:text-appSubText-dark text-xs text-center leading-5 px-2">
+        <Text className="text-xs text-center leading-5 px-2" style={{ color: subText }}>
           لقد حققت هدفك لمدة {currentStreak} أيام متتالية. أطول سلسلة قمت بها
           كانت لمدة {longestStreak} أيام.
         </Text>

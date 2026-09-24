@@ -1,33 +1,25 @@
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Footprints, User, BarChart3 } from 'lucide-react-native';
-import { useAppStore } from '../../../store/useAppStore';
-import { appThemes } from '../../data/storeCatalog';
+import { useTheme } from '../../context/ThemeContext';
 
-// سطح شريط التبويب: يتبع وضع العرض (بطاقة داكنة/فاتحة)، وتبقى ألوان التمييز للمظهر
-const TAB_BAR_BG_DARK = '#1E293B';
-const TAB_BAR_BG_LIGHT = '#FFFFFF';
-
+// سطح شريط التبويب: يتبع السياق الذرّي (نفس إطار قراءة المتجر) فلا يتأخر
+// لون الشريط عن لون الكروت والخلفية أثناء تبديل الوضع الفاتح/الداكن.
 export default function TabLayout() {
-  const themeMode = useAppStore((state) => state.themeMode);
-  const currentThemeId = useAppStore((state) => state.currentThemeId);
+  const { isDarkMode, accent, card, border } = useTheme();
 
-  const currentTheme =
-    appThemes.find((t) => t.id === currentThemeId) ?? appThemes[0];
-  const isDark = themeMode === 'dark';
-  const tabBarBg = isDark ? TAB_BAR_BG_DARK : TAB_BAR_BG_LIGHT;
-  const inactiveColor = isDark ? '#8B949E' : '#94A3B8';
+  const inactiveColor = isDarkMode ? '#8B949E' : '#94A3B8';
 
   return (
-    <View className={isDark ? 'dark flex-1' : 'flex-1'}>
+    <View className={isDarkMode ? 'dark flex-1' : 'flex-1'}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: currentTheme.accent,
+          tabBarActiveTintColor: accent,
           tabBarInactiveTintColor: inactiveColor,
           tabBarStyle: {
-            backgroundColor: tabBarBg,
-            borderTopColor: tabBarBg,
+            backgroundColor: card,
+            borderTopColor: border,
             height: 65,
             paddingBottom: 10,
             paddingTop: 5,

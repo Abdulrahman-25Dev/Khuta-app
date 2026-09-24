@@ -18,7 +18,7 @@ interface Props {
 export const EditProfileModal = forwardRef<BottomSheet, Props>(
   ({ activeField, onClose }, ref) => {
   const { user, updateUser } = useAppStore();
-  const { accent, isDark } = useTheme();
+  const { accent, isDark, bg, card, border, text, subText } = useTheme();
   const [value, setValue] = useState('');
 
   useEffect(() => {
@@ -68,17 +68,20 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }}
+      backgroundStyle={{ backgroundColor: card }}
       handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
     >
       <BottomSheetView className="p-5 flex-1 justify-between">
-        <Text className="text-appText-light dark:text-appText-dark text-lg font-bold text-right mb-2">
+        <Text className="text-lg font-bold text-right mb-2" style={{ color: text }}>
           {config.title}
         </Text>
 
-        <View className="flex-row items-center bg-appBg-light dark:bg-appBg-dark border border-appBorder-light dark:border-appBorder-dark rounded-xl px-4 py-1">
+        <View
+          className="flex-row items-center border rounded-xl px-4 py-1"
+          style={{ backgroundColor: bg, borderColor: border }}
+        >
           {config.unit !== '' && (
-            <Text className="text-appSubText-light dark:text-appSubText-dark font-bold text-base mr-2">
+            <Text className="font-bold text-base mr-2" style={{ color: subText }}>
               {config.unit}
             </Text>
           )}
@@ -88,7 +91,8 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
             placeholder={config.placeholder}
             placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
             keyboardType={config.keyboard as any}
-            className="flex-1 text-appText-light dark:text-appText-dark p-3 text-right text-base font-semibold"
+            className="flex-1 p-3 text-right text-base font-semibold"
+            style={{ color: text }}
             autoFocus
           />
         </View>
