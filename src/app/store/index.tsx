@@ -1,4 +1,4 @@
-import { memo, useCallback, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,21 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import Svg, { Circle, Line, G } from 'react-native-svg';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -290,6 +304,63 @@ const ThemeCard = memo(function ThemeCard({
   );
 });
 
+const PulseRingPreview = ({
+  active,
+  ringColor,
+}: {
+  active: boolean;
+  ringColor: string;
+}) => {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withTiming(1.06, {
+        duration: 1000,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, [scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Svg width={72} height={72} viewBox="0 0 100 100">
+        <Defs>
+          <RadialGradient id="previewPulseGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#00F0FF" stopOpacity={1} />
+            <Stop offset="60%" stopColor="#00F0FF" stopOpacity={0.8} />
+            <Stop offset="100%" stopColor="#00F0FF" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle
+          cx={50}
+          cy={50}
+          r={28}
+          fill="none"
+          stroke="url(#previewPulseGlow)"
+          strokeWidth="7"
+          opacity={active ? 0.9 : 0.5}
+        />
+        <Circle
+          cx={50}
+          cy={50}
+          r={26}
+          fill="none"
+          stroke={ringColor}
+          strokeWidth="5"
+          opacity={active ? 1 : 0.7}
+        />
+      </Svg>
+    </Animated.View>
+  );
+};
+
 const RingPreview = ({
   style,
   active,
@@ -430,82 +501,48 @@ const RingPreview = ({
       );
     case 'double':
       return (
-        <Svg width={72} height={72} viewBox="0 0 72 72">
+        <Svg width={72} height={72} viewBox="0 0 100 100">
           <Circle
-            cx={center}
-            cy={center}
+            cx={50}
+            cy={50}
             r={28}
             fill="none"
             stroke={ringColor}
-            strokeWidth="3"
-            strokeDasharray="25 10"
-            opacity={active ? 1 : 0.8}
+            strokeWidth="4"
+            strokeDasharray="12 10"
+            strokeLinecap="round"
+            strokeOpacity={active ? 1 : 0.7}
           />
           <Circle
-            cx={center}
-            cy={center}
-            r={18}
+            cx={50}
+            cy={50}
+            r={22}
             fill="none"
             stroke={ringColor}
-            strokeWidth="7"
-            strokeDasharray="70 16"
-            opacity={active ? 1 : 0.7}
+            strokeWidth="3"
+            strokeDasharray="12 10"
+            strokeLinecap="round"
+            strokeOpacity={active ? 0.7 : 0.5}
           />
         </Svg>
       );
     case 'dash':
       return (
-        <Svg width={72} height={72} viewBox="0 0 72 72">
+        <Svg width={72} height={72} viewBox="0 0 100 100">
           <Circle
-            cx={center}
-            cy={center}
-            r={24}
+            cx={50}
+            cy={50}
+            r={28}
             fill="none"
             stroke={active ? ringColor : '#94A3B8'}
             strokeWidth="6"
-            strokeDasharray="16 10"
+            strokeDasharray="10 8"
             strokeLinecap="round"
-          />
-          <Circle
-            cx={center}
-            cy={center}
-            r={8}
-            fill={ringColor}
-            opacity={active ? 1 : 0.7}
           />
         </Svg>
       );
     case 'pulse':
-      return (
-        <Svg width={72} height={72} viewBox="0 0 72 72">
-          <Circle
-            cx={center}
-            cy={center}
-            r={20}
-            fill="none"
-            stroke={ringColor}
-            strokeWidth="5"
-            opacity={active ? 1 : 0.7}
-          />
-          <Circle
-            cx={center}
-            cy={center}
-            r={12}
-            fill={ringColor}
-            opacity={active ? 1 : 0.8}
-          />
-          <Circle
-            cx={center}
-            cy={center}
-            r={28}
-            fill="none"
-            stroke={ringColor}
-            strokeWidth="2"
-            strokeDasharray="8 10"
-            opacity={active ? 0.9 : 0.4}
-          />
-        </Svg>
-      );
+      return <PulseRingPreview active={active} ringColor={ringColor} />;
     case 'arc':
       return (
         <Svg width={72} height={72} viewBox="0 0 72 72">
@@ -532,64 +569,52 @@ const RingPreview = ({
     case 'infinity':
       return (
         <Svg width={72} height={72} viewBox="0 0 100 100">
-          <G opacity={active ? 1 : 0.8}>
-            <Circle
-              cx={50}
-              cy={50}
-              r={32}
-              fill="none"
-              stroke={ringColor}
-              strokeWidth="4"
-              opacity={0.9}
-            />
-            <Circle
-              cx={50}
-              cy={50}
-              r={24}
-              fill="none"
-              stroke={ringColor}
-              strokeWidth="4"
-              opacity={0.75}
-            />
-            <Circle
-              cx={50}
-              cy={50}
-              r={7}
-              fill={ringColor}
-              opacity={active ? 1 : 0.75}
-            />
-          </G>
+          <Circle
+            cx={50}
+            cy={50}
+            r={32}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="3"
+            opacity={active ? 0.9 : 0.7}
+          />
+          <Circle
+            cx={50}
+            cy={50}
+            r={24}
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="3"
+            opacity={active ? 0.8 : 0.6}
+          />
         </Svg>
       );
     case 'dotted-flow':
       return (
         <Svg width={72} height={72} viewBox="0 0 100 100">
-          <G opacity={active ? 1 : 0.8}>
-            {Array.from({ length: 14 }).map((_, index) => {
-              const angle = (index / 14) * Math.PI * 2;
-              const cx = 50 + 30 * Math.cos(angle);
-              const cy = 50 + 30 * Math.sin(angle);
-              const r = 1.5 + (index / 14) * 3;
+          {Array.from({ length: 28 }).map((_, index) => {
+            const angle = (index / 28) * Math.PI * 2 - Math.PI / 2;
+            const cx = 50 + 32 * Math.cos(angle);
+            const cy = 50 + 32 * Math.sin(angle);
+            const isActive = index / 28 <= (active ? 0.75 : 0.2);
+            const points = [
+              `${cx},${cy - 2.5}`,
+              `${cx + 2.5},${cy}`,
+              `${cx},${cy + 2.5}`,
+              `${cx - 2.5},${cy}`,
+            ].join(' ');
 
-              return (
-                <Circle
-                  key={index}
-                  cx={cx}
-                  cy={cy}
-                  r={r}
-                  fill={ringColor}
-                  opacity={0.25 + (index / 14) * 0.75}
-                />
-              );
-            })}
-            <Circle
-              cx={50}
-              cy={50}
-              r={8}
-              fill={ringColor}
-              opacity={active ? 1 : 0.7}
-            />
-          </G>
+            return (
+              <Polygon
+                key={index}
+                points={points}
+                fill={isActive ? '#00F0FF' : '#1E293B'}
+                fillOpacity={isActive ? 1 : 0.3}
+                stroke={isActive ? '#00E5FF' : '#334155'}
+                strokeWidth={1}
+              />
+            );
+          })}
         </Svg>
       );
     default:

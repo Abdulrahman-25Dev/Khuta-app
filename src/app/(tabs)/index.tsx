@@ -7,8 +7,22 @@ import {
   TouchableOpacity,
   AppState,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 import {
   Flame,
   MapPin,
@@ -23,8 +37,97 @@ import { Pedometer } from 'expo-sensors';
 import { useAppStore, getTodayKey } from '../../../store/useAppStore';
 import { useTheme } from '../../context/ThemeContext';
 import { ringStyles } from '../../data/storeCatalog';
-import { storage, getStoredCoins, setStoredCoins } from '../../utils/storage';
+import { storage } from '../../utils/storage';
+import { applyStepCoins } from '../../services/coinService';
 import DailyTasksList from '../../components/DailyTasksList';
+
+const PulseRing = ({
+  progress,
+  activeColor,
+  inactiveColor,
+}: {
+  progress: number;
+  activeColor: string;
+  inactiveColor: string;
+}) => {
+  const scale = useSharedValue(0.98);
+  const opacity = useSharedValue(0.85);
+
+  useEffect(() => {
+    scale.value = withRepeat(
+      withTiming(1.04, {
+        duration: 1300,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+    opacity.value = withRepeat(
+      withTiming(1, {
+        duration: 1300,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1,
+      true
+    );
+  }, [opacity, scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const pulseRadius = 80;
+  const circumference = 2 * Math.PI * pulseRadius;
+  const dashOffset = circumference * (1 - progress);
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Svg height="240" width="240" viewBox="0 0 200 200">
+        <Defs>
+          <RadialGradient id="pulseGlow" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#00F0FF" stopOpacity={1} />
+            <Stop offset="55%" stopColor="#00F0FF" stopOpacity={0.8} />
+            <Stop offset="100%" stopColor="#00F0FF" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle
+          cx={100}
+          cy={100}
+          r={pulseRadius + 12}
+          fill="none"
+          stroke="url(#pulseGlow)"
+          strokeWidth="12"
+          opacity={0.5}
+        />
+        <Circle
+          cx={100}
+          cy={100}
+          r={pulseRadius}
+          fill="none"
+          stroke={inactiveColor}
+          strokeWidth="8"
+          strokeDasharray="16 12"
+          strokeLinecap="round"
+          opacity={0.7}
+        />
+        <Circle
+          cx={100}
+          cy={100}
+          r={pulseRadius}
+          fill="none"
+          stroke={activeColor}
+          strokeWidth="8"
+          strokeDasharray="16 12"
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          transform="rotate(-90 100 100)"
+          opacity={0.95}
+        />
+      </Svg>
+    </Animated.View>
+  );
+};
 
 export default function HomeScreen() {
   const { user, addCoins, totalCoins, activeRingStyle } = useAppStore();
@@ -199,8 +302,6 @@ export default function HomeScreen() {
       sessionBaseRef.current = stepsRef.current;
       sessionStepsRef.current = 0;
       lastTotalRef.current = null;
-      let pendingCoins = 0;
-
       pedometerSubscription.current = Pedometer.watchStepCount((result) => {
         ensureCurrentDay();
 
@@ -220,11 +321,8 @@ export default function HomeScreen() {
         storage.set('daily_steps', updatedSteps);
         syncDailyLog(updatedSteps);
 
-        pendingCoins += delta;
-        const earnedCoins = Math.floor(pendingCoins / 100);
+        const { earnedCoins } = applyStepCoins(updatedSteps, totalCoins);
         if (earnedCoins > 0) {
-          pendingCoins -= earnedCoins * 100;
-          setStoredCoins(getStoredCoins() + earnedCoins);
           addCoins(earnedCoins);
         }
       });
@@ -363,105 +461,105 @@ export default function HomeScreen() {
         );
       }
       case 'double': {
-        const outer = 98;
-        const inner = 74;
+        const outerRadius = 84;
+        const innerRadius = 72;
+        const outerCircumference = 2 * Math.PI * outerRadius;
+        const innerCircumference = 2 * Math.PI * innerRadius;
+        const outerOffset = outerCircumference * (1 - progress);
+        const innerOffset = innerCircumference * (1 - progress);
+
         return (
-          <Svg height="240" width="240">
+          <Svg height="240" width="240" viewBox="0 0 200 200">
             <Circle
-              cx={center}
-              cy={center}
-              r={outer}
+              cx={100}
+              cy={100}
+              r={outerRadius}
               fill="none"
               stroke={inactiveColor}
-              strokeWidth="6"
-              strokeDasharray="14 12"
+              strokeWidth="4"
+              strokeDasharray="12 10"
+              strokeLinecap="round"
+              strokeOpacity={1}
             />
             <Circle
-              cx={center}
-              cy={center}
-              r={inner}
+              cx={100}
+              cy={100}
+              r={innerRadius}
+              fill="none"
+              stroke={inactiveColor}
+              strokeWidth="3"
+              strokeDasharray="12 10"
+              strokeLinecap="round"
+              strokeOpacity={0.6}
+            />
+            <Circle
+              cx={100}
+              cy={100}
+              r={outerRadius}
               fill="none"
               stroke={activeColor}
-              strokeWidth="8"
-              strokeDasharray={`${progress * 260} ${260}`}
+              strokeWidth="4"
+              strokeDasharray="12 10"
+              strokeDashoffset={outerOffset}
               strokeLinecap="round"
-              transform={`rotate(-90 ${center} ${center})`}
+              transform="rotate(-90 100 100)"
+              strokeOpacity={1}
             />
             <Circle
-              cx={center}
-              cy={center}
-              r={outer}
+              cx={100}
+              cy={100}
+              r={innerRadius}
               fill="none"
               stroke={activeColor}
               strokeWidth="3"
-              strokeDasharray="8 16"
-              opacity={0.8}
+              strokeDasharray="12 10"
+              strokeDashoffset={innerOffset}
+              strokeLinecap="round"
+              transform="rotate(-90 100 100)"
+              strokeOpacity={0.8}
             />
           </Svg>
         );
       }
       case 'dash': {
-        const dashRadius = 92;
+        const dashRadius = 80;
+        const circumference = 2 * Math.PI * dashRadius;
+        const dashOffset = circumference * (1 - progress);
+
         return (
-          <Svg height="240" width="240">
+          <Svg height="240" width="240" viewBox="0 0 200 200">
             <Circle
-              cx={center}
-              cy={center}
+              cx={100}
+              cy={100}
               r={dashRadius}
               fill="none"
               stroke={inactiveColor}
               strokeWidth="10"
-              strokeDasharray="18 14"
+              strokeDasharray="16 12"
               strokeLinecap="round"
             />
             <Circle
-              cx={center}
-              cy={center}
+              cx={100}
+              cy={100}
               r={dashRadius}
               fill="none"
               stroke={activeColor}
               strokeWidth="10"
-              strokeDasharray={`${Math.max(8, progress * 250)} ${260}`}
+              strokeDasharray="16 12"
+              strokeDashoffset={dashOffset}
               strokeLinecap="round"
-              transform={`rotate(-90 ${center} ${center})`}
+              transform="rotate(-90 100 100)"
             />
           </Svg>
         );
       }
       case 'pulse': {
-        const pulseRadius = 90;
-        const pulseProgress = Math.max(0.08, progress);
-
         return (
-          <Svg height="240" width="240">
-            <Circle
-              cx={center}
-              cy={center}
-              r={pulseRadius}
-              fill="none"
-              stroke={inactiveColor}
-              strokeWidth="8"
-              opacity={0.7}
-            />
-            <Circle
-              cx={center}
-              cy={center}
-              r={pulseRadius * pulseProgress}
-              fill="none"
-              stroke={activeColor}
-              strokeWidth="10"
-              strokeDasharray="130 30"
-              strokeLinecap="round"
-              transform={`rotate(-90 ${center} ${center})`}
-            />
-            <Circle
-              cx={center}
-              cy={center}
-              r={12}
-              fill={activeColor}
-              opacity={0.9}
-            />
-          </Svg>
+          <PulseRing
+            progress={progress}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+          />
         );
       }
       case 'arc': {
@@ -495,72 +593,86 @@ export default function HomeScreen() {
         );
       }
       case 'infinity': {
-        const loopProgress = Math.max(0.15, progress);
+        const outerRadius = 84;
+        const innerRadius = 74;
+        const outerCircumference = 2 * Math.PI * outerRadius;
+        const innerCircumference = 2 * Math.PI * innerRadius;
 
         return (
-          <Svg height="240" width="240">
-            <Path
-              d={`M${center - 62} ${center} C ${center - 62} ${center - 42}, ${center - 28} ${center - 42}, ${center - 18} ${center} C ${center - 28} ${center + 42}, ${center - 62} ${center + 42}, ${center - 62} ${center} M ${center + 62} ${center} C ${center + 62} ${center - 42}, ${center + 28} ${center - 42}, ${center + 18} ${center} C ${center + 28} ${center + 42}, ${center + 62} ${center + 42}, ${center + 62} ${center}`}
+          <Svg height="240" width="240" viewBox="0 0 200 200">
+            <Circle
+              cx={100}
+              cy={100}
+              r={outerRadius}
               fill="none"
               stroke={inactiveColor}
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="3"
+              strokeDasharray="20 12"
               opacity={0.7}
             />
-            <Path
-              d={`M${center - 62} ${center} C ${center - 62} ${center - 42}, ${center - 28} ${center - 42}, ${center - 18} ${center} C ${center - 28} ${center + 42}, ${center - 62} ${center + 42}, ${center - 62} ${center} M ${center + 62} ${center} C ${center + 62} ${center - 42}, ${center + 28} ${center - 42}, ${center + 18} ${center} C ${center + 28} ${center + 42}, ${center + 62} ${center + 42}, ${center + 62} ${center}`}
+            <Circle
+              cx={100}
+              cy={100}
+              r={innerRadius}
               fill="none"
-              stroke={activeColor}
-              strokeWidth="10"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeDasharray={`${Math.max(20, loopProgress * 260)} 260`}
-              transform={`rotate(${progress * 60} ${center} ${center})`}
+              stroke={inactiveColor}
+              strokeWidth="3"
+              strokeDasharray="20 12"
+              opacity={0.7}
             />
             <Circle
-              cx={center}
-              cy={center}
-              r={14}
-              fill={activeColor}
-              opacity={0.9}
+              cx={100}
+              cy={100}
+              r={outerRadius}
+              fill="none"
+              stroke={activeColor}
+              strokeWidth="3"
+              strokeDasharray={`${Math.max(20, progress * outerCircumference)} ${outerCircumference}`}
+              strokeLinecap="round"
+              transform="rotate(-90 100 100)"
+            />
+            <Circle
+              cx={100}
+              cy={100}
+              r={innerRadius}
+              fill="none"
+              stroke={activeColor}
+              strokeWidth="3"
+              strokeDasharray={`${Math.max(20, progress * innerCircumference)} ${innerCircumference}`}
+              strokeLinecap="round"
+              transform="rotate(-90 100 100)"
             />
           </Svg>
         );
       }
       case 'dotted-flow': {
-        const totalDots = 24;
-        const activeDots = Math.max(4, Math.round(progress * totalDots));
+        const totalDiamonds = 28;
 
         return (
-          <Svg height="240" width="240">
-            {Array.from({ length: totalDots }).map((_, index) => {
-              const angle = (index * 360) / totalDots - 90;
-              const rad = (angle * Math.PI) / 180;
-              const distance = 82 + (index % 6) * 5;
-              const x = center + distance * Math.cos(rad);
-              const y = center + distance * Math.sin(rad);
-              const isActive = index < activeDots;
-              const size = 2 + (index / totalDots) * 7;
+          <Svg height="240" width="240" viewBox="0 0 200 200">
+            {Array.from({ length: totalDiamonds }).map((_, index) => {
+              const angle = (index / totalDiamonds) * Math.PI * 2 - Math.PI / 2;
+              const cx = 100 + 80 * Math.cos(angle);
+              const cy = 100 + 80 * Math.sin(angle);
+              const isActive = index / totalDiamonds <= progress;
+              const points = [
+                `${cx},${cy - 4}`,
+                `${cx + 4},${cy}`,
+                `${cx},${cy + 4}`,
+                `${cx - 4},${cy}`,
+              ].join(' ');
 
               return (
-                <Circle
+                <Polygon
                   key={index}
-                  cx={x}
-                  cy={y}
-                  r={isActive ? size : 2.8}
-                  fill={isActive ? activeColor : inactiveColor}
-                  opacity={isActive ? 1 : 0.65}
+                  points={points}
+                  fill={isActive ? '#00F0FF' : '#1E293B'}
+                  fillOpacity={isActive ? 1 : 0.3}
+                  stroke={isActive ? '#00E5FF' : '#334155'}
+                  strokeWidth={isActive ? 1 : 1}
                 />
               );
             })}
-            <Circle
-              cx={center}
-              cy={center}
-              r={14}
-              fill={activeColor}
-              opacity={0.9}
-            />
           </Svg>
         );
       }

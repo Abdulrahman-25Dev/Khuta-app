@@ -27,6 +27,12 @@ import {
 
 const storage = createMMKV();
 
+const getStoredCoins = () => storage.getNumber('khuta_coins') ?? 0;
+const setStoredCoins = (value: number) => {
+  storage.set('khuta_coins', value);
+  return value;
+};
+
 const zustandStorage = {
   setItem: (name: string, value: string) => storage.set(name, value),
   getItem: (name: string) => storage.getString(name) ?? null,
@@ -222,11 +228,16 @@ export const useAppStore = create<AppState>()(
 
       streakDays: 0,
       // التهيئة من النسخة الاحتياطية السابقة (khuta_coins) لضمان عدم فقدان الرصيد المتراكم
-      totalCoins: storage.getNumber('khuta_coins') ?? 0,
+      totalCoins: getStoredCoins(),
       addCoins: (amount) =>
-        set((state) => ({
-          totalCoins: state.totalCoins + amount,
-        })),
+        set((state) => {
+          const baseBalance = getStoredCoins() ?? state.totalCoins;
+          const nextCoins = baseBalance + amount;
+          setStoredCoins(nextCoins);
+          return {
+            totalCoins: nextCoins,
+          };
+        }),
 
       lastActiveDate: getTodayKey(),
       setLastActiveDate: (date) => set({ lastActiveDate: date }),
@@ -310,12 +321,11 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const task = state.dailyTasks.find((t) => t.id === taskId);
           if (!task || task.completed) return {};
-          const previousCoins =
-            storage.getNumber('khuta_coins') ?? state.totalCoins;
+          const previousCoins = getStoredCoins() ?? state.totalCoins;
           const newCoins = previousCoins + task.coins;
-          storage.set('khuta_coins', newCoins);
+          setStoredCoins(newCoins);
           return {
-            totalCoins: state.totalCoins + task.coins,
+            totalCoins: newCoins,
             dailyTasks: state.dailyTasks.map((t) =>
               t.id === taskId ? { ...t, completed: true } : t
             ),
@@ -371,9 +381,8 @@ export const useAppStore = create<AppState>()(
         if (state.ownedThemes.includes(id) || state.totalCoins < price) {
           return false;
         }
-        const newCoins = state.totalCoins - price;
-        // مزامنة رصيد العملات مع مخزن MMKV القديم (khuta_coins) كما يفعل completeTask
-        storage.set('khuta_coins', newCoins);
+        const newCoins = getStoredCoins() - price;
+        setStoredCoins(newCoins);
         set({
           totalCoins: newCoins,
           ownedThemes: [...state.ownedThemes, id],
@@ -388,8 +397,8 @@ export const useAppStore = create<AppState>()(
         ) {
           return false;
         }
-        const newCoins = state.totalCoins - price;
-        storage.set('khuta_coins', newCoins);
+        const newCoins = getStoredCoins() - price;
+        setStoredCoins(newCoins);
         set({
           totalCoins: newCoins,
           ownedProfileBanners: [...state.ownedProfileBanners, id],
@@ -401,8 +410,8 @@ export const useAppStore = create<AppState>()(
         if (state.ownedRingStyles.includes(id) || state.totalCoins < price) {
           return false;
         }
-        const newCoins = state.totalCoins - price;
-        storage.set('khuta_coins', newCoins);
+        const newCoins = getStoredCoins() - price;
+        setStoredCoins(newCoins);
         set({
           totalCoins: newCoins,
           ownedRingStyles: [...state.ownedRingStyles, id],
