@@ -591,30 +591,37 @@ const RingPreview = ({
       );
     case 'dotted-flow':
       return (
-        <Svg width={72} height={72} viewBox="0 0 100 100">
+        <Svg width={84} height={84} viewBox="0 0 100 100">
           {Array.from({ length: 28 }).map((_, index) => {
             const angle = (index / 28) * Math.PI * 2 - Math.PI / 2;
-            const cx = 50 + 32 * Math.cos(angle);
-            const cy = 50 + 32 * Math.sin(angle);
+            const cx = 50 + 33 * Math.cos(angle);
+            const cy = 50 + 33 * Math.sin(angle);
             const isActive = index / 28 <= (active ? 0.75 : 0.2);
             const points = [
-              `${cx},${cy - 2.5}`,
-              `${cx + 2.5},${cy}`,
-              `${cx},${cy + 2.5}`,
-              `${cx - 2.5},${cy}`,
+              `${cx},${cy - 3}`,
+              `${cx + 3},${cy}`,
+              `${cx},${cy + 3}`,
+              `${cx - 3},${cy}`,
             ].join(' ');
 
             return (
               <Polygon
                 key={index}
                 points={points}
-                fill={isActive ? '#00F0FF' : '#1E293B'}
-                fillOpacity={isActive ? 1 : 0.3}
+                fill={isActive ? ringColor : '#1E293B'}
+                fillOpacity={isActive ? 1 : 0.35}
                 stroke={isActive ? '#00E5FF' : '#334155'}
-                strokeWidth={1}
+                strokeWidth={1.1}
               />
             );
           })}
+          <Circle
+            cx={50}
+            cy={50}
+            r={8.5}
+            fill={active ? ringColor : '#E2E8F0'}
+            opacity={active ? 1 : 0.8}
+          />
         </Svg>
       );
     default:
@@ -659,6 +666,37 @@ const RingStyleCard = memo(function RingStyleCard({
         className="relative h-24 rounded-2xl overflow-hidden items-center justify-center"
         style={{ backgroundColor: card }}
       >
+        <Svg
+          width={82}
+          height={82}
+          viewBox="0 0 100 100"
+          style={{ position: 'absolute', opacity: 0.9 }}
+        >
+          <Circle
+            cx={50}
+            cy={50}
+            r={38}
+            fill="none"
+            stroke={`${item.accent}40`}
+            strokeWidth={1.1}
+          />
+          <Circle
+            cx={50}
+            cy={50}
+            r={30}
+            fill="none"
+            stroke={`${item.accent}26`}
+            strokeWidth={0.8}
+          />
+          <Circle
+            cx={50}
+            cy={50}
+            r={18}
+            fill="none"
+            stroke={`${item.accent}22`}
+            strokeWidth={0.8}
+          />
+        </Svg>
         <RingPreview style={item} active={isActive} />
         {badge && <StatusBadge type={badge} />}
       </View>
@@ -732,6 +770,7 @@ const BannerCard = memo(function BannerCard({
         minHeight: 230,
       }}
     >
+      {/* محاكاة مصغّرة لرأس البروفايل: شريط التدرج مع صورة دائرية متراكبة عليه */}
       {/* محاكاة مصغّرة لرأس البروفايل: شريط التدرج مع صورة دائرية متراكبة عليه */}
       <View className="relative h-24 rounded-2xl overflow-hidden">
         <LinearGradient
