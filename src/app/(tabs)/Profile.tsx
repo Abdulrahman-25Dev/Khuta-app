@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Switch,
   Image,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,6 +44,7 @@ import {
 import { EditProfileModal, FieldType } from '../../components/EditProfileModal';
 import { profileBanners } from '../../data/storeCatalog';
 import { useTheme } from '../../context/ThemeContext';
+import { showCustomModal } from '../../store/useModalStore';
 import { getUserLevel } from '../../utils/levelUtils';
 
 const levelIcons: Record<number, LucideIcon> = {
@@ -135,10 +135,10 @@ const Profile = () => {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissionResult.granted) {
-      Alert.alert(
-        'الصلاحية مطلوبة',
-        'يلزم السماح بالوصول للصور لتغيير صورة البروفايل'
-      );
+      showCustomModal({
+        title: 'الصلاحية مطلوبة',
+        message: 'يلزم السماح بالوصول للصور لتغيير صورة البروفايل',
+      });
       return;
     }
 

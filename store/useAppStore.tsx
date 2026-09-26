@@ -158,7 +158,9 @@ interface AppState {
   addCoins: (amount: number) => void;
 
   lastActiveDate: string;
+  lastResetDate: string;
   setLastActiveDate: (date: string) => void;
+  resetDailyQuestProgress: () => void;
 
   // 2. حالة السجل ودوال التحديث
   history: DailyLog[];
@@ -240,7 +242,21 @@ export const useAppStore = create<AppState>()(
         }),
 
       lastActiveDate: getTodayKey(),
+      lastResetDate: new Date().toISOString().split('T')[0],
       setLastActiveDate: (date) => set({ lastActiveDate: date }),
+      resetDailyQuestProgress: () =>
+        set((state) => {
+          const currentDate = new Date().toISOString().split('T')[0];
+          if (state.lastResetDate === currentDate) return {};
+
+          return {
+            lastResetDate: currentDate,
+            dailyTasks: state.dailyTasks.map((task) => ({
+              ...task,
+              completed: false,
+            })),
+          };
+        }),
 
       // 3. القيمة الافتراضية ودالة تحديث السجل
       history: [],
@@ -304,17 +320,27 @@ export const useAppStore = create<AppState>()(
       refreshDailyTasks: () =>
         set((state) => {
           const today = getTodayKey();
-          if (state.tasksDate === today) return {};
+          const currentDate = new Date().toISOString().split('T')[0];
+          const shouldResetDailyTasks = state.lastResetDate !== currentDate;
+
+          if (state.tasksDate === today && !shouldResetDailyTasks) return {};
+
           const totalSteps = state.history.reduce(
             (sum, log) => sum + log.steps,
             0
           );
+          const nextTasks =
+            state.tasksDate === today
+              ? state.dailyTasks
+              : generateDailyTasks(getUserLevel(totalSteps).level, today);
+
           return {
-            dailyTasks: generateDailyTasks(
-              getUserLevel(totalSteps).level,
-              today
-            ),
+            lastResetDate: currentDate,
             tasksDate: today,
+            dailyTasks: nextTasks.map((task) => ({
+              ...task,
+              completed: shouldResetDailyTasks ? false : task.completed,
+            })),
           };
         }),
       completeTask: (taskId) =>
@@ -424,6 +450,7 @@ export const useAppStore = create<AppState>()(
       storage: createJSONStorage(() => zustandStorage),
       version: 5,
       onRehydrateStorage: () => (state) => {
+        state?.resetDailyQuestProgress();
         state?.refreshDailyTasks();
       },
       // التخفيف: نحفظ بيانات الحالة الضرورية فقط، ومنها رصيد العملات (totalCoins)
@@ -435,6 +462,7 @@ export const useAppStore = create<AppState>()(
         streakDays: state.streakDays,
         totalCoins: state.totalCoins,
         lastActiveDate: state.lastActiveDate,
+        lastResetDate: state.lastResetDate,
         history: state.history,
         dailyTasks: state.dailyTasks,
         tasksDate: state.tasksDate,
@@ -461,6 +489,7 @@ export const useAppStore = create<AppState>()(
           streakDays: 0,
           totalCoins: 0,
           lastActiveDate: getTodayKey(),
+          lastResetDate: new Date().toISOString().split('T')[0],
           history: [],
           dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
           tasksDate: getTodayKey(),

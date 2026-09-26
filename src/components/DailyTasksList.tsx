@@ -43,8 +43,17 @@ const getCurrentValue = (task: Task, props: DailyTasksListProps): number => {
   }
 };
 
-const isTaskComplete = (task: Task, current: number) =>
-  task.completed || current >= task.target;
+const isDailyTask = (task: Task) => getTaskTimeframe(task.days) === 'اليوم';
+
+const getTaskProgress = (task: Task, current: number): number => {
+  if (isDailyTask(task) && current <= 0) return 0;
+  return Math.min(100, Math.floor((current / task.target) * 100));
+};
+
+const isTaskComplete = (task: Task, current: number) => {
+  if (isDailyTask(task) && current <= 0) return false;
+  return task.completed || current >= task.target;
+};
 
 export default memo(function DailyTasksList({
   currentSteps = 0,
@@ -83,7 +92,7 @@ export default memo(function DailyTasksList({
       <View className="flex-row-reverse items-center gap-2 px-1 mb-3">
         <ListChecks color={accent} size={22} />
         <Text className="text-lg font-bold" style={{ color: text }}>
-         المهام اليومية
+          المهام اليومية
         </Text>
       </View>
 
@@ -92,108 +101,107 @@ export default memo(function DailyTasksList({
         style={{ backgroundColor: card, borderColor: border }}
       >
         {dailyTasks.map((task: Task, index: number) => {
-        const TaskIcon = taskIcons[task.type];
-        const isLast = index === dailyTasks.length - 1;
-        const current = getCurrentValue(task, metrics);
-        const done = isTaskComplete(task, current);
-        const progress = done
-          ? 100
-          : Math.min(
-              100,
-              Math.max(0, Math.round((current / task.target) * 100))
-            );
+          const TaskIcon = taskIcons[task.type];
+          const isLast = index === dailyTasks.length - 1;
+          const current = getCurrentValue(task, metrics);
+          const done = isTaskComplete(task, current);
+          const progress = done ? 100 : getTaskProgress(task, current);
 
-        return (
-          <View
-            key={task.id}
-            className={`py-3 ${isLast ? '' : 'border-b'}`}
-            style={isLast ? undefined : { borderBottomColor: border }}
-          >
-            <View className="flex-row-reverse items-center justify-between gap-3">
-              <View
-                style={{ backgroundColor: `${accent}20` }}
-                className="w-10 h-10 rounded-full items-center justify-center"
-              >
-                <TaskIcon color={accent} size={20} />
-              </View>
+          return (
+            <View
+              key={task.id}
+              className={`py-3 ${isLast ? '' : 'border-b'}`}
+              style={isLast ? undefined : { borderBottomColor: border }}
+            >
+              <View className="flex-row-reverse items-center justify-between gap-3">
+                <View
+                  style={{ backgroundColor: `${accent}20` }}
+                  className="w-10 h-10 rounded-full items-center justify-center"
+                >
+                  <TaskIcon color={accent} size={20} />
+                </View>
 
-              <View className="flex-1">
-                <Text className="text-sm font-bold text-right" style={{ color: text }}>
-                  {task.title}
-                </Text>
-                <View className="flex-row-reverse items-center justify-end gap-1.5 mt-1">
-                  <Text className="text-xs text-right" style={{ color: subText }}>
-                    {task.target.toLocaleString('en-US')} {task.unit}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: `${accent}20`,
-                      borderColor: `${accent}40`,
-                    }}
-                    className="px-1.5 py-0.5 rounded-full border"
+                <View className="flex-1">
+                  <Text
+                    className="text-sm font-bold text-right"
+                    style={{ color: text }}
                   >
+                    {task.title}
+                  </Text>
+                  <View className="flex-row-reverse items-center justify-end gap-1.5 mt-1">
                     <Text
-                      style={{ color: accent }}
-                      className="text-[10px] font-bold"
+                      className="text-xs text-right"
+                      style={{ color: subText }}
                     >
-                      {getTaskTimeframe(task.days)}
+                      {task.target.toLocaleString('en-US')} {task.unit}
                     </Text>
+                    <View
+                      style={{
+                        backgroundColor: `${accent}20`,
+                        borderColor: `${accent}40`,
+                      }}
+                      className="px-1.5 py-0.5 rounded-full border"
+                    >
+                      <Text
+                        style={{ color: accent }}
+                        className="text-[10px] font-bold"
+                      >
+                        {getTaskTimeframe(task.days)}
+                      </Text>
+                    </View>
                   </View>
+                </View>
+
+                {/* حالة الإكمال: تظهر تلقائياً عند الوصول إلى الهدف */}
+                <View
+                  style={{
+                    borderColor: done ? accent : `${accent}66`,
+                  }}
+                  className={`w-9 h-9 rounded-full items-center justify-center border-2 ${
+                    done ? '' : 'opacity-70'
+                  }`}
+                >
+                  {done ? (
+                    <CheckCircle2 color={accent} size={22} />
+                  ) : (
+                    <Circle color={`${accent}66`} size={20} />
+                  )}
                 </View>
               </View>
 
-              {/* حالة الإكمال: تظهر تلقائياً عند الوصول إلى الهدف */}
-              <View
-                style={{
-                  borderColor: done
-                    ? accent
-                    : `${accent}66`,
-                }}
-                className={`w-9 h-9 rounded-full items-center justify-center border-2 ${
-                  done ? '' : 'opacity-70'
-                }`}
-              >
-                {done ? (
-                  <CheckCircle2 color={accent} size={22} />
-                ) : (
-                  <Circle color={`${accent}66`} size={20} />
-                )}
-              </View>
-            </View>
-
-            {/* شريط التقدم */}
-            <View className="mt-3" style={{ direction: 'rtl' }}>
-              <View
-                className="h-1.5 rounded-full overflow-hidden"
-                style={{ backgroundColor: border }}
-              >
+              {/* شريط التقدم */}
+              <View className="mt-3" style={{ direction: 'rtl' }}>
                 <View
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: accent,
-                  }}
-                  className="h-full rounded-full"
-                />
-              </View>
-            </View>
-
-            {/* المكافأة ونسبة التقدم */}
-            <View className="flex-row-reverse items-center justify-between mt-2.5">
-              <View className="flex-row-reverse items-center gap-1">
-                <Coins color={accent} size={13} />
-                <Text
-                  style={{ color: accent }}
-                  className="text-xs font-bold"
+                  className="h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: border }}
                 >
-                  +{task.coins} عملة
+                  <View
+                    style={{
+                      width: `${progress}%`,
+                      backgroundColor: accent,
+                    }}
+                    className="h-full rounded-full"
+                  />
+                </View>
+              </View>
+
+              {/* المكافأة ونسبة التقدم */}
+              <View className="flex-row-reverse items-center justify-between mt-2.5">
+                <View className="flex-row-reverse items-center gap-1">
+                  <Coins color={accent} size={13} />
+                  <Text style={{ color: accent }} className="text-xs font-bold">
+                    +{task.coins} عملة
+                  </Text>
+                </View>
+                <Text
+                  className="text-[11px] font-bold"
+                  style={{ color: subText }}
+                >
+                  {done ? 'اكتمل!' : `${progress}%`}
                 </Text>
               </View>
-              <Text className="text-[11px] font-bold" style={{ color: subText }}>
-                {done ? 'اكتمل!' : `${progress}%`}
-              </Text>
             </View>
-          </View>
-        );
+          );
         })}
       </View>
     </View>

@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Alert,
   StatusBar,
 } from 'react-native';
 import Animated, {
@@ -37,6 +36,7 @@ import {
 import { useAppStore } from '../../../store/useAppStore';
 import { BadgeIcon } from '../../components/BadgeIcon';
 import { useTheme } from '../../context/ThemeContext';
+import { showCustomModal } from '../../store/useModalStore';
 import {
   appThemes,
   ringStyles,
@@ -875,14 +875,17 @@ export default function StoreScreen() {
   const handleBuyTheme = useCallback(
     (item: AppTheme, price: number) => {
       if (totalCoins < price) {
-        Alert.alert(INSUFFICIENT, INSUFFICIENT_MSG);
+        showCustomModal({
+          title: INSUFFICIENT,
+          message: INSUFFICIENT_MSG,
+        });
         return;
       }
       if (purchaseTheme(item.id, price)) {
-        Alert.alert(
-          'تم الشراء',
-          'أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».'
-        );
+        showCustomModal({
+          title: 'تم الشراء',
+          message: 'أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».',
+        });
       }
     },
     [totalCoins, purchaseTheme]
@@ -891,14 +894,17 @@ export default function StoreScreen() {
   const handleBuyBanner = useCallback(
     (item: ProfileBanner, price: number) => {
       if (totalCoins < price) {
-        Alert.alert(INSUFFICIENT, INSUFFICIENT_MSG);
+        showCustomModal({
+          title: INSUFFICIENT,
+          message: INSUFFICIENT_MSG,
+        });
         return;
       }
       if (purchaseProfileBanner(item.id, price)) {
-        Alert.alert(
-          'تم الشراء',
-          'أُضيفت الخلفية إلى مكتبتك، فعّلها من زر «تطبيق».'
-        );
+        showCustomModal({
+          title: 'تم الشراء',
+          message: 'أُضيفت الخلفية إلى مكتبتك، فعّلها من زر «تطبيق».',
+        });
       }
     },
     [totalCoins, purchaseProfileBanner]
@@ -907,14 +913,17 @@ export default function StoreScreen() {
   const handleBuyRingStyle = useCallback(
     (item: RingStyle, price: number) => {
       if (totalCoins < price) {
-        Alert.alert(INSUFFICIENT, INSUFFICIENT_MSG);
+        showCustomModal({
+          title: INSUFFICIENT,
+          message: INSUFFICIENT_MSG,
+        });
         return;
       }
       if (purchaseRingStyle(item.id, price)) {
-        Alert.alert(
-          'تم الشراء',
-          'أُضيف نمط العداد إلى مكتبتك، فعّله من زر «تطبيق».'
-        );
+        showCustomModal({
+          title: 'تم الشراء',
+          message: 'أُضيف نمط العداد إلى مكتبتك، فعّله من زر «تطبيق».',
+        });
       }
     },
     [totalCoins, purchaseRingStyle]

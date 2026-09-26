@@ -2,12 +2,22 @@ import './global.css';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Stack, ThemeProvider as NavigationThemeProvider, DarkTheme, DefaultTheme, type Theme } from 'expo-router';
+import {
+  Stack,
+  ThemeProvider as NavigationThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  type Theme,
+} from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 
 import { useAppStore, getTodayKey } from '../../store/useAppStore';
-import { ThemeProvider as AppThemeProvider, useTheme } from '../context/ThemeContext';
+import {
+  ThemeProvider as AppThemeProvider,
+  useTheme,
+} from '../context/ThemeContext';
+import { CustomModalHost } from '../components/CustomModal';
 import {
   initializeNotifications,
   syncEveningReminder,
@@ -95,6 +105,7 @@ function RootNavigator() {
               }}
             />
           </Stack>
+          <CustomModalHost />
         </GestureHandlerRootView>
       </View>
     </NavigationThemeProvider>
