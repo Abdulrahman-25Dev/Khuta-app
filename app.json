@@ -14,7 +14,10 @@
       }
     },
     "android": {
-      "gradleArgs": ["-Xmx4096m", "-XX:MaxMetaspaceSize=512m"],
+      "gradleArgs": [
+        "-Xmx4096m",
+        "-XX:MaxMetaspaceSize=512m"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/KhutaIcon.png",
@@ -40,7 +43,8 @@
         }
       ],
       "expo-image",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,

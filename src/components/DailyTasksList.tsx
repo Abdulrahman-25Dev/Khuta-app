@@ -170,7 +170,7 @@ export default memo(function DailyTasksList({
               </View>
 
               {/* شريط التقدم */}
-              <View className="mt-3" style={{ direction: 'rtl' }}>
+              <View className="mt-3">
                 <View
                   className="h-1.5 rounded-full overflow-hidden"
                   style={{ backgroundColor: border }}
