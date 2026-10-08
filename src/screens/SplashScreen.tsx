@@ -69,7 +69,7 @@ export default function SplashScreenRoute() {
 
   const glowAnimatedStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
-    transform: [{ scale: glowScale.value }],
+    transform: [{ scale: glowScale.value }],  
   }));
 
   return (
