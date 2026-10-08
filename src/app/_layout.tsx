@@ -98,6 +98,13 @@ function RootNavigator() {
             }}
           >
             <Stack.Screen
+              name="index"
+              options={{
+                headerShown: false,
+                contentStyle: { backgroundColor: bg },
+              }}
+            />
+            <Stack.Screen
               name="(tabs)"
               options={{
                 headerShown: false,

@@ -14,10 +14,7 @@
       }
     },
     "android": {
-      "gradleArgs": [
-        "-Xmx4096m",
-        "-XX:MaxMetaspaceSize=512m"
-      ],
+      "gradleArgs": ["-Xmx4096m", "-XX:MaxMetaspaceSize=512m"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/KhutaIcon.png",
@@ -37,7 +34,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0F172A",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
