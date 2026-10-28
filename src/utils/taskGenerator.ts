@@ -4,11 +4,17 @@ export interface Task {
   id: string;
   type: TaskType;
   title: string;
+  titleKey: string;
   target: number;
   unit: string;
+  unitKey: string;
   coins: number;
   completed: boolean;
   days: number;
+  startDate: string;
+  expiresAt: string;
+  progress: number;
+  dailyProgress: Record<string, number>;
 }
 
 export function getTaskTimeframe(days: number): string {
@@ -23,12 +29,23 @@ export function getTaskTimeframe(days: number): string {
   }
 }
 
+export function getTaskTimeframeKey(
+  days: number
+): 'tasks.today' | 'tasks.withinTwoDays' | 'tasks.withinDays' {
+  const safeDays = Math.max(1, Math.floor(days || 1));
+  if (safeDays === 1) return 'tasks.today';
+  if (safeDays === 2) return 'tasks.withinTwoDays';
+  return 'tasks.withinDays';
+}
+
 interface TaskTemplate {
   type: TaskType;
   min: number;
   max: number;
   unit: string;
-  titles: string[];
+  unitKey: string;
+  titleKeys: string[];
+  fallbackTitles: string[];
 }
 
 const TASK_TEMPLATES: TaskTemplate[] = [
@@ -37,34 +54,45 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     min: 3000,
     max: 12000,
     unit: 'خطوة',
-    titles: ['تحدي الخطوات', 'خطوات اليوم'],
+    unitKey: 'tasks.types.steps.unit',
+    titleKeys: ['tasks.types.steps.title_0', 'tasks.types.steps.title_1'],
+    fallbackTitles: ['تحدي الخطوات', 'خطوات اليوم'],
   },
   {
     type: 'distance',
     min: 2,
     max: 8,
     unit: 'كم',
-    titles: ['تحدي المسافة', 'مسافة المشي'],
+    unitKey: 'tasks.types.distance.unit',
+    titleKeys: ['tasks.types.distance.title_0', 'tasks.types.distance.title_1'],
+    fallbackTitles: ['تحدي المسافة', 'مسافة المشي'],
   },
   {
     type: 'calories',
     min: 150,
     max: 500,
     unit: 'سعرة',
-    titles: ['تحدي السعرات', 'حارق السعرات'],
+    unitKey: 'tasks.types.calories.unit',
+    titleKeys: ['tasks.types.calories.title_0', 'tasks.types.calories.title_1'],
+    fallbackTitles: ['تحدي السعرات', 'حارق السعرات'],
   },
   {
     type: 'duration',
     min: 20,
     max: 60,
     unit: 'دقيقة',
-    titles: ['وقت النشاط', 'حركية الجلسة'],
+    unitKey: 'tasks.types.duration.unit',
+    titleKeys: ['tasks.types.duration.title_0', 'tasks.types.duration.title_1'],
+    fallbackTitles: ['وقت النشاط', 'حركية الجلسة'],
   },
 ];
 
 // حدود الإطار الزمني لكل نوع: targets below dailyMax → "اليوم"،
 // up to twoDayMax → "خلال يومين"، وفوق ذلك → "خلال 3 أيام"
-const TASK_THRESHOLDS: Record<TaskType, { dailyMax: number; twoDayMax: number }> = {
+const TASK_THRESHOLDS: Record<
+  TaskType,
+  { dailyMax: number; twoDayMax: number }
+> = {
   steps: { dailyMax: 8000, twoDayMax: 12000 },
   distance: { dailyMax: 3, twoDayMax: 5 },
   calories: { dailyMax: 300, twoDayMax: 450 },
@@ -112,12 +140,56 @@ const mulberry32 = (seed: number) => () => {
 const randInt = (rng: () => number, min: number, max: number) =>
   min + Math.floor(rng() * (max - min + 1));
 
+function createTask(
+  template: TaskTemplate,
+  userLevel: number,
+  dateString: string,
+  rng: () => number
+): Task {
+  const level = Math.max(1, Math.floor(userLevel));
+  const factor = 1 + levelFactor(level) * 0.12;
+  const raw = randInt(rng, template.min, template.max);
+  const target = Math.max(template.min, Math.round(raw * factor));
+  const titleIndex = randInt(rng, 0, template.titleKeys.length - 1);
+  const days = getTaskDays(template.type, target);
+  const startDate = dateString.slice(0, 10);
+
+  return {
+    id: `${dateString}:${template.type}`,
+    type: template.type,
+    title: template.fallbackTitles[titleIndex],
+    titleKey: template.titleKeys[titleIndex],
+    target,
+    unit: template.unit,
+    unitKey: template.unitKey,
+    coins: getTaskCoins(template.type, target),
+    completed: false,
+    days,
+    startDate,
+    expiresAt: shiftDateKey(startDate, days - 1),
+    progress: 0,
+    dailyProgress: {},
+  };
+}
+
+function shiftDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  const shiftedYear = date.getUTCFullYear();
+  const shiftedMonth = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const shiftedDay = String(date.getUTCDate()).padStart(2, '0');
+  return `${shiftedYear}-${shiftedMonth}-${shiftedDay}`;
+}
+
 // مضاعِف الصعوبة: يرتفع مع مستوى المستخدم
 const levelFactor = (level: number) => Math.max(1, Math.floor(level)) - 1;
 
-export function generateDailyTasks(userLevel: number, dateString: string): Task[] {
+export function generateDailyTasks(
+  userLevel: number,
+  dateString: string
+): Task[] {
   const level = Math.max(1, Math.floor(userLevel));
-  const factor = 1 + levelFactor(level) * 0.12;
   const rng = mulberry32(hashSeed(`${dateString}:khuta-daily-tasks`));
 
   const shuffled = [...TASK_TEMPLATES].sort(() => rng() - 0.5);
@@ -125,21 +197,5 @@ export function generateDailyTasks(userLevel: number, dateString: string): Task[
     .slice(0, 3)
     .sort((a, b) => a.type.localeCompare(b.type));
 
-  return chosen.map((template) => {
-    const raw = randInt(rng, template.min, template.max);
-    const target = Math.max(template.min, Math.round(raw * factor));
-    const title = template.titles[randInt(rng, 0, template.titles.length - 1)];
-    const days = getTaskDays(template.type, target);
-
-    return {
-      id: `${dateString}:${template.type}`,
-      type: template.type,
-      title,
-      target,
-      unit: template.unit,
-      coins: getTaskCoins(template.type, target),
-      completed: false,
-      days,
-    };
-  });
+  return chosen.map((template) => createTask(template, level, dateString, rng));
 }

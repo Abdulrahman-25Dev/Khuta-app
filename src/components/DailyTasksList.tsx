@@ -12,7 +12,7 @@ import {
   LucideIcon,
 } from 'lucide-react-native';
 
-import { useAppStore } from '../../store/useAppStore';
+import { getTodayKey, useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../context/ThemeContext';
 import { Task, TaskType, getTaskTimeframe } from '../utils/taskGenerator';
 
@@ -43,16 +43,15 @@ const getCurrentValue = (task: Task, props: DailyTasksListProps): number => {
   }
 };
 
-const isDailyTask = (task: Task) => getTaskTimeframe(task.days) === 'اليوم';
-
-const getTaskProgress = (task: Task, current: number): number => {
-  if (isDailyTask(task) && current <= 0) return 0;
-  return Math.min(100, Math.floor((current / task.target) * 100));
-};
-
-const isTaskComplete = (task: Task, current: number) => {
-  if (isDailyTask(task) && current <= 0) return false;
-  return task.completed || current >= task.target;
+const getRemainingDays = (expiresAt: string, today: string): number => {
+  const [expiresYear, expiresMonth, expiresDay] = expiresAt
+    .split('-')
+    .map(Number);
+  const [todayYear, todayMonth, todayDay] = today.split('-').map(Number);
+  const expiresDate = Date.UTC(expiresYear, expiresMonth - 1, expiresDay);
+  const todayDate = Date.UTC(todayYear, todayMonth - 1, todayDay);
+  const daysUntilExpiry = Math.ceil((expiresDate - todayDate) / 86_400_000);
+  return Math.max(1, daysUntilExpiry + 1);
 };
 
 export default memo(function DailyTasksList({
@@ -61,7 +60,7 @@ export default memo(function DailyTasksList({
   currentCalories = 0,
   currentMinutes = 0,
 }: DailyTasksListProps) {
-  const { dailyTasks, completeTask } = useAppStore();
+  const { dailyTasks, completeTask, updateTaskProgress } = useAppStore();
   // ألوان الأسطح والنصوص من السياق الذرّي مباشرةً (لا useState/useEffect مؤجلة)
   const { accent, card, border, text, subText } = useTheme();
   const metrics: DailyTasksListProps = {
@@ -71,11 +70,20 @@ export default memo(function DailyTasksList({
     currentMinutes,
   };
 
-  // إكمال تلقائي: تُمنح المهمة فور بلوغ قيمتها الحالية الهدف، بلا أي تفاعل يدوي
+  // اليوم يضيف فقط الزيادة فوق أعلى قراءة مسجلة لهذا اليوم إلى التقدم السابق.
   useEffect(() => {
+    const todayKey = getTodayKey();
     dailyTasks.forEach((task) => {
-      if (!task.completed && getCurrentValue(task, metrics) >= task.target) {
+      if (task.completed) return;
+      const todayValue = getCurrentValue(task, metrics);
+      const previousTodayValue = task.dailyProgress[todayKey] ?? 0;
+      const todayMax = Math.max(previousTodayValue, todayValue);
+      const cumulative = task.progress - previousTodayValue + todayMax;
+
+      if (cumulative >= task.target) {
         completeTask(task.id);
+      } else if (cumulative !== task.progress) {
+        updateTaskProgress(task.id, cumulative, todayKey, todayMax);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,6 +93,7 @@ export default memo(function DailyTasksList({
     currentDistanceKm,
     currentCalories,
     currentMinutes,
+    updateTaskProgress,
   ]);
 
   return (
@@ -103,9 +112,12 @@ export default memo(function DailyTasksList({
         {dailyTasks.map((task: Task, index: number) => {
           const TaskIcon = taskIcons[task.type];
           const isLast = index === dailyTasks.length - 1;
-          const current = getCurrentValue(task, metrics);
-          const done = isTaskComplete(task, current);
-          const progress = done ? 100 : getTaskProgress(task, current);
+          const progress = Math.min(
+            100,
+            Math.floor((task.progress / task.target) * 100)
+          );
+          const done = task.completed || task.progress >= task.target;
+          const remainingDays = getRemainingDays(task.expiresAt, getTodayKey());
 
           return (
             <View
@@ -150,6 +162,16 @@ export default memo(function DailyTasksList({
                       </Text>
                     </View>
                   </View>
+                  {task.days > 1 && (
+                    <Text
+                      className="text-[10px] text-right mt-1"
+                      style={{ color: subText }}
+                    >
+                      {remainingDays === 1
+                        ? 'ينتهي اليوم'
+                        : `ينتهي بعد ${remainingDays} أيام`}
+                    </Text>
+                  )}
                 </View>
 
                 {/* حالة الإكمال: تظهر تلقائياً عند الوصول إلى الهدف */}

@@ -7,8 +7,9 @@ import {
   generateDailyTasks,
   getTaskDays,
   getTaskCoins,
-  Task,
+  type Task,
 } from '../src/utils/taskGenerator';
+import { refreshTasksForToday, shiftDate } from '../src/utils/taskLifecycle';
 import { getUserLevel } from '../src/utils/levelUtils';
 import {
   handleDailyGoalReached,
@@ -175,6 +176,12 @@ interface AppState {
   refreshDailyTasks: () => void;
   // إنهاء مهمة وإضافة مكافأة العملات إليها
   completeTask: (taskId: string) => void;
+  updateTaskProgress: (
+    taskId: string,
+    newProgress: number,
+    todayKey: string,
+    todayValue: number
+  ) => void;
 
   // تفضيل التحكم بالتنبيهات (إشعار إنجاز الهدف + تذكير المساء)
   notificationsEnabled: boolean;
@@ -246,16 +253,10 @@ export const useAppStore = create<AppState>()(
       setLastActiveDate: (date) => set({ lastActiveDate: date }),
       resetDailyQuestProgress: () =>
         set((state) => {
-          const currentDate = new Date().toISOString().split('T')[0];
+          const currentDate = getTodayKey();
           if (state.lastResetDate === currentDate) return {};
 
-          return {
-            lastResetDate: currentDate,
-            dailyTasks: state.dailyTasks.map((task) => ({
-              ...task,
-              completed: false,
-            })),
-          };
+          return { lastResetDate: currentDate };
         }),
 
       // 3. القيمة الافتراضية ودالة تحديث السجل
@@ -320,29 +321,35 @@ export const useAppStore = create<AppState>()(
       refreshDailyTasks: () =>
         set((state) => {
           const today = getTodayKey();
-          const currentDate = new Date().toISOString().split('T')[0];
-          const shouldResetDailyTasks = state.lastResetDate !== currentDate;
-
-          if (state.tasksDate === today && !shouldResetDailyTasks) return {};
-
           const totalSteps = state.history.reduce(
             (sum, log) => sum + log.steps,
             0
           );
-          const nextTasks =
-            state.tasksDate === today
-              ? state.dailyTasks
-              : generateDailyTasks(getUserLevel(totalSteps).level, today);
+          const userLevel = getUserLevel(totalSteps).level;
+          const nextTasks = refreshTasksForToday(
+            state.dailyTasks,
+            today,
+            userLevel
+          );
 
           return {
-            lastResetDate: currentDate,
+            lastResetDate: today,
             tasksDate: today,
-            dailyTasks: nextTasks.map((task) => ({
-              ...task,
-              completed: shouldResetDailyTasks ? false : task.completed,
-            })),
+            dailyTasks: nextTasks,
           };
         }),
+      updateTaskProgress: (taskId, newProgress, todayKey, todayValue) =>
+        set((state) => ({
+          dailyTasks: state.dailyTasks.map((task) => {
+            if (task.id !== taskId) return task;
+            const dailyProgress = { ...task.dailyProgress };
+            dailyProgress[todayKey] = Math.max(
+              dailyProgress[todayKey] ?? 0,
+              todayValue
+            );
+            return { ...task, progress: newProgress, dailyProgress };
+          }),
+        })),
       completeTask: (taskId) =>
         set((state) => {
           const task = state.dailyTasks.find((t) => t.id === taskId);
@@ -350,11 +357,20 @@ export const useAppStore = create<AppState>()(
           const previousCoins = getStoredCoins() ?? state.totalCoins;
           const newCoins = previousCoins + task.coins;
           setStoredCoins(newCoins);
+          const today = getTodayKey();
+          const totalSteps = state.history.reduce(
+            (sum, log) => sum + log.steps,
+            0
+          );
+          const userLevel = getUserLevel(totalSteps).level;
+          const completedTasks = state.dailyTasks.map((currentTask) =>
+            currentTask.id === taskId
+              ? { ...currentTask, completed: true }
+              : currentTask
+          );
           return {
             totalCoins: newCoins,
-            dailyTasks: state.dailyTasks.map((t) =>
-              t.id === taskId ? { ...t, completed: true } : t
-            ),
+            dailyTasks: refreshTasksForToday(completedTasks, today, userLevel),
           };
         }),
 
@@ -448,7 +464,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 5,
+      version: 6,
       onRehydrateStorage: () => (state) => {
         state?.resetDailyQuestProgress();
         state?.refreshDailyTasks();
@@ -473,7 +489,7 @@ export const useAppStore = create<AppState>()(
         ownedProfileBanners: state.ownedProfileBanners,
         ownedRingStyles: state.ownedRingStyles,
       }),
-      migrate: (persistedState) => {
+      migrate: (persistedState, version) => {
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
           currentThemeId?: string;
           accentColor?: AccentColor;
@@ -516,6 +532,38 @@ export const useAppStore = create<AppState>()(
           accentColor: _legacyAccentColor,
           ...rest
         } = persisted;
+        const tasksDate = persisted.tasksDate ?? getTodayKey();
+        const fallbackTitles: Record<Task['type'], string> = {
+          steps: 'تحدي الخطوات',
+          distance: 'تحدي المسافة',
+          calories: 'تحدي السعرات',
+          duration: 'وقت النشاط',
+        };
+        const fallbackUnits: Record<Task['type'], string> = {
+          steps: 'خطوة',
+          distance: 'كم',
+          calories: 'سعرة',
+          duration: 'دقيقة',
+        };
+        const migratedTasks: Task[] = (
+          persisted.dailyTasks ?? fallback.dailyTasks
+        ).map((task) => {
+          const days = task.days ?? getTaskDays(task.type, task.target);
+          const startDate = task.startDate ?? tasksDate;
+          return {
+            ...task,
+            title: task.title ?? fallbackTitles[task.type],
+            titleKey: task.titleKey ?? `tasks.types.${task.type}.title_0`,
+            unit: task.unit ?? fallbackUnits[task.type],
+            unitKey: task.unitKey ?? `tasks.types.${task.type}.unit`,
+            days,
+            coins: task.coins ?? getTaskCoins(task.type, task.target),
+            startDate,
+            expiresAt: task.expiresAt ?? shiftDate(startDate, days - 1),
+            progress: version < 6 ? 0 : (task.progress ?? 0),
+            dailyProgress: version < 6 ? {} : (task.dailyProgress ?? {}),
+          };
+        });
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,
@@ -523,13 +571,7 @@ export const useAppStore = create<AppState>()(
           // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
           activeTheme: legacyActiveTheme,
           // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
-          dailyTasks: (persisted.dailyTasks ?? fallback.dailyTasks).map(
-            (task) => ({
-              ...task,
-              days: getTaskDays(task.type, task.target),
-              coins: getTaskCoins(task.type, task.target),
-            })
-          ),
+          dailyTasks: migratedTasks,
         } as AppState;
       },
     }
