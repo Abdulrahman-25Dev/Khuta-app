@@ -94,7 +94,7 @@ const Profile = () => {
     profileBanners[0];
 
   const totalSteps = history.reduce((sum, log) => sum + log.steps, 0);
-  const totalCalories = Math.round(totalSteps * 0.04);
+  const totalCalories = history.reduce((sum, log) => sum + log.calories, 0);
 
   const bestStreak = (() => {
     const goalDates = history
@@ -477,6 +477,34 @@ const Profile = () => {
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
 
+          {/* تعديل الجنس */}
+          <TouchableOpacity
+            onPress={() => openEditModal('gender')}
+            className={`${rowDirection} justify-between items-center p-4 border-b`}
+            style={{ borderBottomColor: border }}
+          >
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <User color={accent} size={18} />
+              </View>
+              <View>
+                <Text
+                  className={`text-sm font-bold ${textAlignment}`}
+                  style={{ color: text }}
+                >
+                  {t('profile.gender')}
+                </Text>
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {t(`profile.${user.gender}`)}
+                </Text>
+              </View>
+            </View>
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
+          </TouchableOpacity>
+
           {/* تعديل الوزن */}
           <TouchableOpacity
             onPress={() => openEditModal('weight')}
@@ -611,7 +639,7 @@ const Profile = () => {
       <BottomSheet
         ref={languageSheetRef}
         index={-1}
-        snapPoints={['35%']}
+        snapPoints={['25%']}
         enablePanDownToClose
         backdropComponent={(props: BottomSheetBackdropProps) => (
           <BottomSheetBackdrop
@@ -629,26 +657,29 @@ const Profile = () => {
           <Text className="text-xl font-bold text-center" style={{ color: text }}>
             {t('profile.language')}
           </Text>
-          {(['ar', 'en'] as const).map((language) => (
-            <TouchableOpacity
-              key={language}
-              onPress={() => void handleLanguageChange(language)}
-              activeOpacity={0.8}
-              className="mt-3 rounded-2xl p-4 border"
-              style={{
-                backgroundColor:
-                  language === (isArabic ? 'ar' : 'en') ? `${accent}20` : bg,
-                borderColor:
-                  language === (isArabic ? 'ar' : 'en') ? accent : border,
-              }}
-            >
-              <Text className="text-center font-bold" style={{ color: text }}>
-                {language === 'ar'
-                  ? t('profile.arabic')
-                  : t('profile.english')}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <View className={`${rowDirection} gap-3 mt-3`}>
+            {(['ar', 'en'] as const).map((language) => {
+              const isSelected = language === (isArabic ? 'ar' : 'en');
+              return (
+                <TouchableOpacity
+                  key={language}
+                  onPress={() => void handleLanguageChange(language)}
+                  activeOpacity={0.8}
+                  className="flex-1 items-center rounded-2xl p-4 border"
+                  style={{
+                    backgroundColor: isSelected ? `${accent}20` : bg,
+                    borderColor: isSelected ? accent : border,
+                  }}
+                >
+                  <Text className="text-center font-bold" style={{ color: text }}>
+                    {language === 'ar'
+                      ? t('profile.arabic')
+                      : t('profile.english')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </BottomSheetView>
       </BottomSheet>
     </SafeAreaView>

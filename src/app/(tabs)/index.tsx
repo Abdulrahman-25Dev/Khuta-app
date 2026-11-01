@@ -41,6 +41,11 @@ import { ringStyles } from '../../data/storeCatalog';
 import { storage } from '../../utils/storage';
 import { applyStepCoins } from '../../services/coinService';
 import DailyTasksList from '../../components/DailyTasksList';
+import {
+  calculateCalories,
+  calculateDistanceKm,
+  calculateStepLengthMeters,
+} from '../../utils/stepUtils';
 
 const PulseRing = ({
   progress,
@@ -168,10 +173,9 @@ export default function HomeScreen() {
   );
   const ensureCurrentDayRef = useRef<() => void>(() => {});
 
-  // احتساب المسافة والسعرات بناءً على طول القامة
-  const stepLengthMeters = ((user?.height ?? 160) * 0.415) / 100;
-  const distanceKm = ((steps * stepLengthMeters) / 1000).toFixed(2);
-  const calories = Math.round(steps * 0.04);
+  const stepLengthMeters = calculateStepLengthMeters(user.height, user.gender);
+  const distanceKm = calculateDistanceKm(steps, stepLengthMeters);
+  const calories = calculateCalories(steps, user.weight);
 
   // إدارة مؤقت الثواني
   useEffect(() => {
@@ -200,10 +204,15 @@ export default function HomeScreen() {
   const finalizeDay = useCallback(() => {
     const store = useAppStore.getState();
     const finalSteps = stepsRef.current;
-    const finalDistance = parseFloat(
-      ((finalSteps * stepLengthMeters) / 1000).toFixed(2)
+    const finalStepLengthMeters = calculateStepLengthMeters(
+      store.user.height,
+      store.user.gender
     );
-    const finalCalories = Math.round(finalSteps * 0.04);
+    const finalDistance = calculateDistanceKm(
+      finalSteps,
+      finalStepLengthMeters
+    );
+    const finalCalories = calculateCalories(finalSteps, store.user.weight);
 
     // إنهاء اليوم عبر دالة المتجر: تثبّت السجل وتُقدّم التاريخ، ولا تمسّ رصيد العملات أبداً
     store.finalizeDay({
@@ -225,7 +234,7 @@ export default function HomeScreen() {
 
     sessionBaseRef.current = 0;
     sessionStepsRef.current = 0;
-  }, [stepLengthMeters]);
+  }, []);
 
   // التحقق من تجاوز منتصف الليل وتشغيل تصفير اليوم عند تغيّر التاريخ
   const ensureCurrentDay = useCallback(() => {
@@ -239,13 +248,16 @@ export default function HomeScreen() {
 
   // مزامنة سجل اليوم مباشرة مع المتجر باستخدام مفتاح تاريخ اليوم الحالي
   const syncDailyLog = (currentSteps: number) => {
+    const currentUser = useAppStore.getState().user;
+    const currentStepLengthMeters = calculateStepLengthMeters(
+      currentUser.height,
+      currentUser.gender
+    );
     useAppStore.getState().addOrUpdateDailyLog({
       date: getTodayKey(),
       steps: currentSteps,
-      distance: parseFloat(
-        ((currentSteps * stepLengthMeters) / 1000).toFixed(2)
-      ),
-      calories: Math.round(currentSteps * 0.04),
+      distance: calculateDistanceKm(currentSteps, currentStepLengthMeters),
+      calories: calculateCalories(currentSteps, currentUser.weight),
       durationSeconds: secondsElapsedRef.current,
     });
   };
@@ -818,7 +830,7 @@ export default function HomeScreen() {
                 className="text-lg font-bold mt-1.5"
                 style={{ color: text }}
               >
-                {distanceKm}
+                {distanceKm.toFixed(2)}
               </Text>
               <Text className="text-xs mt-0.5" style={{ color: subText }}>
                 {t('home.distanceKm')}
@@ -860,7 +872,7 @@ export default function HomeScreen() {
         {/* مهام اليوم الديناميكية */}
         <DailyTasksList
           currentSteps={steps}
-          currentDistanceKm={parseFloat(distanceKm)}
+          currentDistanceKm={distanceKm}
           currentCalories={calories}
           currentMinutes={secondsElapsed / 60}
         />

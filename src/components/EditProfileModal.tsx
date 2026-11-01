@@ -15,7 +15,13 @@ import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../context/ThemeContext';
 
-export type FieldType = 'name' | 'weight' | 'height' | 'dailyGoal' | null;
+export type FieldType =
+  | 'name'
+  | 'weight'
+  | 'height'
+  | 'gender'
+  | 'dailyGoal'
+  | null;
 
 interface Props {
   activeField: FieldType;
@@ -41,6 +47,12 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
 
   const handleSave = () => {
     if (!activeField) return;
+
+    if (activeField === 'gender') {
+      updateUser({ gender: value === 'female' ? 'female' : 'male' });
+      onClose();
+      return;
+    }
 
     const parsedValue = activeField === 'name' ? value : Number(value);
     updateUser({ [activeField]: parsedValue });
@@ -73,6 +85,13 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
           placeholder: t('profile.edit.heightPlaceholder'),
           keyboard: 'numeric' as KeyboardTypeOptions,
           unit: t('home.heightCm'),
+        };
+      case 'gender':
+        return {
+          title: t('profile.gender'),
+          placeholder: '',
+          keyboard: 'default' as KeyboardTypeOptions,
+          unit: '',
         };
       case 'dailyGoal':
         return {
@@ -112,29 +131,56 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
           {config.title}
         </Text>
 
-        <View
-          className={`${rowDirection} items-center border rounded-xl px-4 py-1`}
-          style={{ backgroundColor: bg, borderColor: border }}
-        >
-          {config.unit !== '' && (
-            <Text
-              className={`font-bold text-base ${i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}`}
-              style={{ color: subText }}
-            >
-              {config.unit}
-            </Text>
-          )}
-          <BottomSheetTextInput
-            value={value}
-            onChangeText={setValue}
-            placeholder={config.placeholder}
-            placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
-            keyboardType={config.keyboard as any}
-            className={`flex-1 p-3 ${textAlignment} text-base font-semibold`}
-            style={{ color: text }}
-            autoFocus
-          />
-        </View>
+        {activeField === 'gender' ? (
+          <View className={`${rowDirection} gap-3`}>
+            {(['male', 'female'] as const).map((gender) => {
+              const isSelected = value === gender;
+              return (
+                <TouchableOpacity
+                  key={gender}
+                  onPress={() => setValue(gender)}
+                  activeOpacity={0.8}
+                  className="flex-1 items-center rounded-2xl p-4 border"
+                  style={{
+                    backgroundColor: isSelected ? `${accent}20` : bg,
+                    borderColor: isSelected ? accent : border,
+                  }}
+                >
+                  <Text
+                    className="font-bold text-base"
+                    style={{ color: text }}
+                  >
+                    {t(`profile.${gender}`)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View
+            className={`${rowDirection} items-center border rounded-xl px-4 py-1`}
+            style={{ backgroundColor: bg, borderColor: border }}
+          >
+            {config.unit !== '' && (
+              <Text
+                className={`font-bold text-base ${i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}`}
+                style={{ color: subText }}
+              >
+                {config.unit}
+              </Text>
+            )}
+            <BottomSheetTextInput
+              value={value}
+              onChangeText={setValue}
+              placeholder={config.placeholder}
+              placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
+              keyboardType={config.keyboard as any}
+              className={`flex-1 p-3 ${textAlignment} text-base font-semibold`}
+              style={{ color: text }}
+              autoFocus
+            />
+          </View>
+        )}
 
         <TouchableOpacity
           onPress={handleSave}

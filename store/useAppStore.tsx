@@ -12,6 +12,11 @@ import {
 import { refreshTasksForToday, shiftDate } from '../src/utils/taskLifecycle';
 import { getUserLevel } from '../src/utils/levelUtils';
 import {
+  calculateCalories,
+  calculateDistanceKm,
+  calculateStepLengthMeters,
+} from '../src/utils/stepUtils';
+import {
   handleDailyGoalReached,
   syncEveningReminder,
   cancelEveningReminder,
@@ -129,6 +134,7 @@ interface UserProfile {
   name: string;
   weight: number;
   height: number;
+  gender: 'male' | 'female';
   dailyGoal: number;
   image?: string;
 }
@@ -228,6 +234,7 @@ export const useAppStore = create<AppState>()(
         name: 'عبدالرحمن',
         weight: 70,
         height: 160,
+        gender: 'male',
         dailyGoal: 5000,
       },
       updateUser: (newData) =>
@@ -263,10 +270,19 @@ export const useAppStore = create<AppState>()(
       history: [],
       addOrUpdateDailyLog: (newLog) =>
         set((state) => {
+          const stepLengthMeters = calculateStepLengthMeters(
+            state.user.height,
+            state.user.gender
+          );
+          const calculatedLog = {
+            ...newLog,
+            distance: calculateDistanceKm(newLog.steps, stepLengthMeters),
+            calories: calculateCalories(newLog.steps, state.user.weight),
+          };
           const userGoal = state.user.dailyGoal;
-          const isGoalMet = newLog.steps >= userGoal;
+          const isGoalMet = calculatedLog.steps >= userGoal;
           const existingIndex = state.history.findIndex(
-            (item) => item.date === newLog.date
+            (item) => item.date === calculatedLog.date
           );
           const wasGoalMet =
             existingIndex >= 0
@@ -278,23 +294,27 @@ export const useAppStore = create<AppState>()(
           if (existingIndex >= 0) {
             // تحديث سجّل اليوم الحالي
             updatedHistory[existingIndex] = {
-              ...newLog,
+              ...calculatedLog,
               goalReached: isGoalMet,
             };
           } else {
             // إضافة سجل ليوم جديد
             updatedHistory.push({
-              ...newLog,
+              ...calculatedLog,
               goalReached: isGoalMet,
             });
           }
 
           // Trigger 1: لحظة انتقال تقدم اليوم إلى 100% نُطلق إشعاراً عالياً فورياً
           // (مرة واحدة في اليوم) ونُلغي تذكير مساء نفس اليوم.
-          if (!wasGoalMet && isGoalMet && newLog.date === getTodayKey()) {
+          if (
+            !wasGoalMet &&
+            isGoalMet &&
+            calculatedLog.date === getTodayKey()
+          ) {
             void handleDailyGoalReached({
               notificationsEnabled: state.notificationsEnabled,
-              todayKey: newLog.date,
+              todayKey: calculatedLog.date,
             });
           }
 
@@ -304,7 +324,16 @@ export const useAppStore = create<AppState>()(
       // إغلاق اليوم: تثبيت سجل اليوم ثم تقدم التاريخ. رصيد العملات (totalCoins)
       // يبقى كما هو ولا يُعدَّل نهائياً هنا.
       finalizeDay: (newLog) => {
-        get().addOrUpdateDailyLog(newLog);
+        const user = get().user;
+        const stepLengthMeters = calculateStepLengthMeters(
+          user.height,
+          user.gender
+        );
+        get().addOrUpdateDailyLog({
+          ...newLog,
+          distance: calculateDistanceKm(newLog.steps, stepLengthMeters),
+          calories: calculateCalories(newLog.steps, user.weight),
+        });
         set({ lastActiveDate: getTodayKey() });
         get().refreshDailyTasks();
         // Trigger 2: بعد انقلاب التاريخ نُبقي جدولة تذكير المساء متزامنة (اليوم غير مكتمل بعد)
@@ -464,7 +493,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 6,
+      version: 7,
       onRehydrateStorage: () => (state) => {
         state?.resetDailyQuestProgress();
         state?.refreshDailyTasks();
@@ -500,6 +529,7 @@ export const useAppStore = create<AppState>()(
             name: 'عبدالرحمن',
             weight: 70,
             height: 160,
+            gender: 'male',
             dailyGoal: 5000,
           },
           streakDays: 0,
@@ -568,6 +598,11 @@ export const useAppStore = create<AppState>()(
         return {
           ...fallback,
           ...rest,
+          user: {
+            ...fallback.user,
+            ...(persisted.user ?? {}),
+            gender: persisted.user?.gender ?? 'male',
+          },
           // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
           activeTheme: legacyActiveTheme,
           // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
