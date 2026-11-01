@@ -29,33 +29,44 @@ import {
   ChevronRight,
   Coins,
   Crown,
+  Gift,
   Lock,
   Check,
+  Snowflake,
+  Target,
   User,
+  Zap,
 } from 'lucide-react-native';
 
-import { useAppStore } from '../../../store/useAppStore';
+import { getTodayKey, useAppStore } from '../../../store/useAppStore';
 import { BadgeIcon } from '../../components/BadgeIcon';
+import ProgressRing from '../../components/ProgressRing';
 import { useTheme } from '../../context/ThemeContext';
 import { showCustomModal } from '../../store/useModalStore';
 import {
   appThemes,
+  offers,
   ringStyles,
   defaultThemeId,
   AppTheme,
+  Offer,
   ProfileBanner,
   RingStyle,
 } from '../../data/storeCatalog';
+import type { ActiveEffect } from '../../../store/useAppStore';
 
 // المظهر الافتراضي غير قابل للشراء أو التبديل: يُخفى من شريط المتجر
 const shopThemes = appThemes.filter((t) => t.id !== defaultThemeId);
 
-type TabKey = 'themes' | 'rings';
+type TabKey = 'themes' | 'rings' | 'offers';
 
 const TABS: {
   key: TabKey;
-  labelKey: 'store.tabs.themes' | 'store.tabs.rings';
-  hintKey: 'store.tabs.themesHint' | 'store.tabs.ringsHint';
+  labelKey: 'store.tabs.themes' | 'store.tabs.rings' | 'store.tabs.offers';
+  hintKey:
+    | 'store.tabs.themesHint'
+    | 'store.tabs.ringsHint'
+    | 'store.tabs.offersHint';
 }[] = [
   {
     key: 'themes',
@@ -66,6 +77,11 @@ const TABS: {
     key: 'rings',
     labelKey: 'store.tabs.rings',
     hintKey: 'store.tabs.ringsHint',
+  },
+  {
+    key: 'offers',
+    labelKey: 'store.tabs.offers',
+    hintKey: 'store.tabs.offersHint',
   },
 ];
 
@@ -388,6 +404,40 @@ const RingPreview = ({
   const ringColor = style.accent;
   const radius = 26;
   const center = 36;
+  const { isDarkMode } = useTheme();
+
+  if (
+    style.kind === 'spiral' ||
+    style.kind === 'star' ||
+    style.kind === 'cube' ||
+    style.kind === 'zigzag'
+  ) {
+    return (
+      <View
+        style={{
+          width: 84,
+          height: 84,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: 240,
+            height: 240,
+            transform: [{ scale: 0.34 }],
+          }}
+        >
+          <ProgressRing
+            progress={active ? 0.72 : 0.28}
+            style={style}
+            isDarkMode={isDarkMode}
+            accent={ringColor}
+          />
+        </View>
+      </View>
+    );
+  }
 
   switch (style.kind) {
     case 'ticks':
@@ -755,6 +805,170 @@ const RingStyleCard = memo(function RingStyleCard({
   );
 });
 
+const OfferCard = memo(function OfferCard({
+  offer,
+  activeEffect,
+  activeKindEffect,
+  claimed,
+  totalCoins,
+  onBuy,
+  onActivate,
+  onClaim,
+}: {
+  offer: Offer;
+  activeEffect?: ActiveEffect;
+  activeKindEffect?: ActiveEffect;
+  claimed: boolean;
+  totalCoins: number;
+  onBuy: (offer: Offer) => void;
+  onActivate: (offer: Offer) => void;
+  onClaim: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const { card, border, text, subText } = useTheme();
+  const [now, setNow] = useState(0);
+  const activeEffectExpiresAt = Math.max(
+    activeEffect?.expiresAt ?? 0,
+    activeKindEffect?.expiresAt ?? 0
+  );
+  useEffect(() => {
+    const initialTimeout = setTimeout(() => setNow(Date.now()), 0);
+    if (activeEffectExpiresAt === undefined) {
+      return () => clearTimeout(initialTimeout);
+    }
+
+    const expiryTimeout = setTimeout(
+      () => setNow(Date.now()),
+      Math.max(0, activeEffectExpiresAt - Date.now())
+    );
+    return () => {
+      clearTimeout(initialTimeout);
+      clearTimeout(expiryTimeout);
+    };
+  }, [activeEffectExpiresAt]);
+  const iconColor = offer.kind === 'daily-free' ? '#22C55E' : offer.kind === 'coin-box' ? '#EAB308' : offer.kind === 'streak-freeze' ? '#38BDF8' : offer.kind === 'multiplier' ? '#F97316' : '#A78BFA';
+  const icon =
+    offer.kind === 'daily-free' ? (
+      <Gift color={iconColor} size={22} />
+    ) : offer.kind === 'coin-box' ? (
+      <Coins color={iconColor} size={22} />
+    ) : offer.kind === 'streak-freeze' ? (
+      <Snowflake color={iconColor} size={22} />
+    ) : offer.kind === 'multiplier' ? (
+      <Zap color={iconColor} size={22} />
+    ) : (
+      <Target color={iconColor} size={22} />
+    );
+  const isEffect = offer.kind === 'multiplier' || offer.kind === 'goal-reduce';
+  const effectIsActive =
+    isEffect &&
+    activeEffect !== undefined &&
+    (now === 0 || activeEffect.expiresAt > now);
+  const kindEffectIsActive =
+    isEffect &&
+    activeKindEffect !== undefined &&
+    (now === 0 || activeKindEffect.expiresAt > now);
+  const disabled =
+    (offer.kind === 'daily-free' && claimed) ||
+    kindEffectIsActive ||
+    (offer.kind !== 'daily-free' && totalCoins < offer.price);
+  const buttonLabel =
+    offer.kind === 'daily-free'
+      ? claimed
+        ? t('offers.claimed')
+        : t('offers.claim')
+      : effectIsActive && activeEffect
+        ? t('offers.activeUntil', {
+            date: new Date(activeEffect.expiresAt).toLocaleString(
+              i18n.language
+            ),
+          })
+        : kindEffectIsActive && activeKindEffect
+          ? t('offers.effectAlreadyActiveUntil', {
+              date: new Date(activeKindEffect.expiresAt).toLocaleString(
+                i18n.language
+              ),
+            })
+        : isEffect
+          ? t('offers.activate')
+          : t('offers.buy');
+  const handlePress = () => {
+    if (offer.kind === 'daily-free') {
+      onClaim();
+    } else if (isEffect) {
+      onActivate(offer);
+    } else {
+      onBuy(offer);
+    }
+  };
+
+  return (
+    <View
+      className="flex-1 rounded-3xl border p-3"
+      style={{ backgroundColor: card, borderColor: border, minHeight: 196 }}
+    >
+      <View className="flex-row items-center gap-3">
+        <View
+          className="h-11 w-11 rounded-2xl items-center justify-center"
+          style={{ backgroundColor: `${iconColor}18` }}
+        >
+          {icon}
+        </View>
+        <View className="flex-1">
+          <Text className="text-sm font-bold" style={{ color: text }}>
+            {t(offer.nameKey)}
+          </Text>
+          {offer.kind !== 'daily-free' && (
+            <View className="flex-row items-center gap-1 mt-1">
+              <Coins color={iconColor} size={12} />
+              <Text className="text-xs font-bold" style={{ color: iconColor }}>
+                {formatNumber(offer.price)}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+      <Text className="text-xs leading-5 mt-3 flex-1" style={{ color: subText }}>
+        {t(offer.descriptionKey)}
+      </Text>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        disabled={disabled}
+        onPress={handlePress}
+        className="rounded-xl py-2.5 items-center justify-center mt-3"
+        style={{
+          backgroundColor: disabled ? `${iconColor}22` : iconColor,
+          opacity: disabled && !effectIsActive && !(claimed && offer.kind === 'daily-free') ? 0.55 : 1,
+        }}
+      >
+        <View className="flex-row items-center justify-center gap-1">
+          <Text
+            numberOfLines={1}
+            className="text-xs font-bold px-1"
+            style={{ color: disabled ? iconColor : '#FFFFFF' }}
+          >
+            {buttonLabel}
+          </Text>
+          {offer.kind !== 'daily-free' && !kindEffectIsActive && (
+            <View className="flex-row items-center gap-0.5">
+              <Coins
+                color={disabled ? iconColor : '#FFFFFF'}
+                size={12}
+              />
+              <Text
+                className="text-xs font-bold"
+                style={{ color: disabled ? iconColor : '#FFFFFF' }}
+              >
+                {formatNumber(offer.price)}
+              </Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 // ————— بطاقة خلفية البروفايل (معزولة بـ React.memo) —————
 const BannerCard = memo(function BannerCard({
   item,
@@ -870,12 +1084,17 @@ export default function StoreScreen() {
   const ownedThemes = useAppStore((s) => s.ownedThemes);
   const activeRingStyle = useAppStore((s) => s.activeRingStyle);
   const ownedRingStyles = useAppStore((s) => s.ownedRingStyles);
+  const activeEffects = useAppStore((s) => s.activeEffects);
+  const lastFreeClaimDate = useAppStore((s) => s.lastFreeClaimDate);
   const selectStoreTheme = useAppStore((s) => s.selectStoreTheme);
   const applyProfileBanner = useAppStore((s) => s.applyProfileBanner);
   const selectRingStyle = useAppStore((s) => s.selectRingStyle);
   const purchaseTheme = useAppStore((s) => s.purchaseTheme);
   const purchaseProfileBanner = useAppStore((s) => s.purchaseProfileBanner);
   const purchaseRingStyle = useAppStore((s) => s.purchaseRingStyle);
+  const purchaseOffer = useAppStore((s) => s.purchaseOffer);
+  const applyEffect = useAppStore((s) => s.applyEffect);
+  const claimDailyFree = useAppStore((s) => s.claimDailyFree);
 
   // ألوان الأسطح والتمييز من السياق الذرّي في نفس إطار القراءة
   const { isDarkMode, accent, card, border, text, subText } = useTheme();
@@ -953,6 +1172,48 @@ export default function StoreScreen() {
     [totalCoins, purchaseRingStyle, t]
   );
 
+  const handleBuyOffer = useCallback(
+    (offer: Offer) => {
+      if (totalCoins < offer.price) {
+        showCustomModal({
+          title: t('store.insufficient'),
+          message: t('store.insufficientMsg'),
+        });
+        return;
+      }
+      if (purchaseOffer(offer.id, offer.price)) {
+        showCustomModal({
+          title: t('offers.purchased'),
+          message: t('offers.purchasedMsg'),
+        });
+      }
+    },
+    [totalCoins, purchaseOffer, t]
+  );
+
+  const handleActivateOffer = useCallback(
+    (offer: Offer) => {
+      if (totalCoins < offer.price) {
+        showCustomModal({
+          title: t('store.insufficient'),
+          message: t('store.insufficientMsg'),
+        });
+        return;
+      }
+      if (applyEffect(offer)) {
+        showCustomModal({
+          title: t('offers.activated'),
+          message: t('offers.activatedMsg'),
+        });
+      }
+    },
+    [totalCoins, applyEffect, t]
+  );
+
+  const handleClaimDailyFree = useCallback(() => {
+    claimDailyFree();
+  }, [claimDailyFree]);
+
   // ————— عرض الشبكة عبر FlatList (معزول ولم يُعاد إنشاؤه إلا عند تغيّر الحالة ذات الصلة) —————
   const renderThemeItem = useCallback(
     ({ item }: { item: AppTheme }) => (
@@ -990,6 +1251,44 @@ export default function StoreScreen() {
       </View>
     ),
     [activeRingStyle, ownedRingStyles, handleApplyRingStyle, handleBuyRingStyle, isRtl]
+  );
+
+  const renderOfferItem = useCallback(
+    ({ item }: { item: Offer }) => (
+      <View
+        style={isRtl ? { transform: [{ scaleX: -1 }] } : undefined}
+        className="flex-1"
+      >
+        <OfferCard
+          offer={item}
+          activeEffect={activeEffects
+            .find((effect) => effect.id === item.id && effect.expiresAt > Date.now())}
+          activeKindEffect={activeEffects
+            .filter((effect) => effect.kind === item.kind)
+            .reduce<ActiveEffect | undefined>(
+              (latest, effect) =>
+                !latest || effect.expiresAt > latest.expiresAt
+                  ? effect
+                  : latest,
+              undefined
+            )}
+          claimed={lastFreeClaimDate === getTodayKey()}
+          totalCoins={totalCoins}
+          onBuy={handleBuyOffer}
+          onActivate={handleActivateOffer}
+          onClaim={handleClaimDailyFree}
+        />
+      </View>
+    ),
+    [
+      activeEffects,
+      lastFreeClaimDate,
+      totalCoins,
+      handleBuyOffer,
+      handleActivateOffer,
+      handleClaimDailyFree,
+      isRtl,
+    ]
   );
 
   const activeTabData = TABS.find((t) => t.key === activeTab);
@@ -1084,7 +1383,7 @@ export default function StoreScreen() {
             renderItem={renderThemeItem}
           />
         </RtlGrid>
-      ) : (
+      ) : activeTab === 'rings' ? (
         <RtlGrid isRtl={isRtl}>
           <FlatList<RingStyle>
             key="rings"
@@ -1103,6 +1402,27 @@ export default function StoreScreen() {
             windowSize={5}
             removeClippedSubviews
             renderItem={renderRingStyleItem}
+          />
+        </RtlGrid>
+      ) : (
+        <RtlGrid isRtl={isRtl}>
+          <FlatList<Offer>
+            key="offers"
+            data={offers}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            columnWrapperStyle={{ gap: 12 }}
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: 32,
+              gap: 12,
+            }}
+            showsVerticalScrollIndicator={false}
+            initialNumToRender={4}
+            maxToRenderPerBatch={8}
+            windowSize={5}
+            removeClippedSubviews
+            renderItem={renderOfferItem}
           />
         </RtlGrid>
       )}

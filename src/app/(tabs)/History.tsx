@@ -27,10 +27,11 @@ const formatCompact = (n: number) => {
 const daysBetween = (a: string, b: string) =>
   Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000);
 
-const getCurrentStreak = (history: DailyLog[]) => {
+const getCurrentStreak = (history: DailyLog[], frozenDays: string[]) => {
   const goalDays = new Set(
     history.filter((l) => l.goalReached).map((l) => l.date)
   );
+  frozenDays.forEach((date) => goalDays.add(date));
   let streak = 0;
   const cursor = new Date();
   if (!goalDays.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
@@ -41,11 +42,13 @@ const getCurrentStreak = (history: DailyLog[]) => {
   return streak;
 };
 
-const getLongestStreak = (history: DailyLog[]) => {
-  const goalDays = history
-    .filter((l) => l.goalReached)
-    .map((l) => l.date)
-    .sort();
+const getLongestStreak = (history: DailyLog[], frozenDays: string[]) => {
+  const goalDays = [
+    ...new Set([
+      ...history.filter((l) => l.goalReached).map((l) => l.date),
+      ...frozenDays,
+    ]),
+  ].sort();
   let longest = 0;
   let run = 0;
   let prev: string | null = null;
@@ -59,7 +62,7 @@ const getLongestStreak = (history: DailyLog[]) => {
 
 const History = () => {
   const { t, i18n } = useTranslation();
-  const { history } = useAppStore();
+  const { history, frozenDays } = useAppStore();
   const rowDirection =
     i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
   const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
@@ -102,7 +105,7 @@ const History = () => {
     return {
       value: log?.steps ?? 0,
       label: day.label,
-      frontColor: log?.goalReached
+      frontColor: log?.goalReached || frozenDays.includes(day.key)
           ? accent
           : `${accent}66`,
     };
@@ -110,8 +113,8 @@ const History = () => {
 
   const chartMax = Math.max(8000, ...barData.map((b) => b.value));
 
-  const currentStreak = getCurrentStreak(history);
-  const longestStreak = getLongestStreak(history);
+  const currentStreak = getCurrentStreak(history, frozenDays);
+  const longestStreak = getLongestStreak(history, frozenDays);
 
   return (
     <SafeAreaView className="flex-1 px-5">

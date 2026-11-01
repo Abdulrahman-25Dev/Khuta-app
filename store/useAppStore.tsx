@@ -27,7 +27,10 @@ import {
   defaultBannerId,
   defaultRingStyleId,
   ringStyles,
+  offers,
   type AppTheme,
+  type Offer,
+  type OfferKind,
   type RingStyle,
 } from '../src/data/storeCatalog';
 
@@ -149,6 +152,12 @@ export interface DailyLog {
   goalReached: boolean;
 }
 
+export interface ActiveEffect {
+  id: string;
+  kind: OfferKind;
+  expiresAt: number;
+}
+
 interface AppState {
   themeMode: ThemeMode;
   toggleTheme: () => void;
@@ -163,6 +172,16 @@ interface AppState {
   // تُحفظ دائماً ولا تُصفَّر أبداً، حتى عند إعادة ضبط خطوات اليوم عند منتصف الليل.
   totalCoins: number;
   addCoins: (amount: number) => void;
+  activeEffects: ActiveEffect[];
+  streakFreezes: number;
+  frozenDays: string[];
+  lastFreeClaimDate: string | null;
+  ownedOffers: string[];
+  applyEffect: (offer: Offer) => boolean;
+  purchaseOffer: (offerId: string, price: number) => boolean;
+  claimDailyFree: () => boolean;
+  hasActiveEffect: (kind: string) => boolean;
+  consumeStreakFreeze: (date?: string) => boolean;
 
   lastActiveDate: string;
   lastResetDate: string;
@@ -247,13 +266,137 @@ export const useAppStore = create<AppState>()(
       totalCoins: getStoredCoins(),
       addCoins: (amount) =>
         set((state) => {
-          const baseBalance = getStoredCoins() ?? state.totalCoins;
-          const nextCoins = baseBalance + amount;
+          const baseBalance = Math.max(getStoredCoins(), state.totalCoins);
+          const multiplierActive = state.activeEffects.some(
+            (effect) =>
+              effect.kind === 'multiplier' && effect.expiresAt > Date.now()
+          );
+          const nextCoins =
+            baseBalance + amount * (multiplierActive ? 2 : 1);
           setStoredCoins(nextCoins);
           return {
             totalCoins: nextCoins,
           };
         }),
+      activeEffects: [],
+      streakFreezes: 0,
+      frozenDays: [],
+      lastFreeClaimDate: null,
+      ownedOffers: [],
+      hasActiveEffect: (kind) =>
+        get().activeEffects.some(
+          (effect) => effect.kind === kind && effect.expiresAt > Date.now()
+        ),
+      applyEffect: (offer) => {
+        const catalogOffer = offers.find((item) => item.id === offer.id);
+        if (
+          !catalogOffer ||
+          (catalogOffer.kind !== 'multiplier' &&
+            catalogOffer.kind !== 'goal-reduce')
+        ) {
+          return false;
+        }
+
+        const state = get();
+        const now = Date.now();
+        if (
+          Math.max(getStoredCoins(), state.totalCoins) < catalogOffer.price ||
+          state.activeEffects.some(
+            (effect) =>
+              effect.kind === catalogOffer.kind && effect.expiresAt > now
+          )
+        ) {
+          return false;
+        }
+
+        const duration =
+          catalogOffer.id === 'multiplier-7d'
+            ? 7 * 24 * 60 * 60 * 1000
+            : 24 * 60 * 60 * 1000;
+        const newCoins =
+          Math.max(getStoredCoins(), state.totalCoins) - catalogOffer.price;
+        setStoredCoins(newCoins);
+        set({
+          totalCoins: newCoins,
+          ownedOffers: [...state.ownedOffers, catalogOffer.id],
+          activeEffects: [
+            ...state.activeEffects.filter((effect) => effect.expiresAt > now),
+            {
+              id: catalogOffer.id,
+              kind: catalogOffer.kind,
+              expiresAt: now + duration,
+            },
+          ],
+        });
+        return true;
+      },
+      purchaseOffer: (offerId, price) => {
+        const catalogOffer = offers.find((item) => item.id === offerId);
+        if (
+          !catalogOffer ||
+          catalogOffer.price !== price ||
+          (catalogOffer.kind !== 'coin-box' &&
+            catalogOffer.kind !== 'streak-freeze')
+        ) {
+          return false;
+        }
+
+        const state = get();
+        const balance = Math.max(getStoredCoins(), state.totalCoins);
+        if (balance < catalogOffer.price) return false;
+
+        const newCoins =
+          balance -
+          catalogOffer.price +
+          (catalogOffer.kind === 'coin-box' ? catalogOffer.value : 0);
+        setStoredCoins(newCoins);
+        set({
+          totalCoins: newCoins,
+          ownedOffers: [
+            ...state.ownedOffers,
+            ...(catalogOffer.kind === 'streak-freeze'
+              ? Array.from({ length: catalogOffer.value }, () => catalogOffer.id)
+              : [catalogOffer.id]),
+          ],
+          streakFreezes:
+            state.streakFreezes +
+            (catalogOffer.kind === 'streak-freeze' ? catalogOffer.value : 0),
+        });
+        return true;
+      },
+      claimDailyFree: () => {
+        const state = get();
+        const today = getTodayKey();
+        if (state.lastFreeClaimDate === today) return false;
+
+        const reward = offers.find((offer) => offer.kind === 'daily-free');
+        if (!reward) return false;
+
+        const newCoins =
+          Math.max(getStoredCoins(), state.totalCoins) + reward.value;
+        setStoredCoins(newCoins);
+        set({ totalCoins: newCoins, lastFreeClaimDate: today });
+        return true;
+      },
+      consumeStreakFreeze: (date = getTodayKey()) => {
+        const state = get();
+        if (state.streakFreezes <= 0 || state.frozenDays.includes(date)) {
+          return false;
+        }
+
+        const freezeIndex = state.ownedOffers.findIndex(
+          (id) =>
+            offers.find((offer) => offer.id === id)?.kind === 'streak-freeze'
+        );
+        const ownedOffers = [...state.ownedOffers];
+        if (freezeIndex !== -1) ownedOffers.splice(freezeIndex, 1);
+        set({
+          streakFreezes: state.streakFreezes - 1,
+          ownedOffers,
+          frozenDays: [...state.frozenDays, date],
+        });
+        return true;
+      },
 
       lastActiveDate: getTodayKey(),
       lastResetDate: new Date().toISOString().split('T')[0],
@@ -280,14 +423,27 @@ export const useAppStore = create<AppState>()(
             calories: calculateCalories(newLog.steps, state.user.weight),
           };
           const userGoal = state.user.dailyGoal;
-          const isGoalMet = calculatedLog.steps >= userGoal;
           const existingIndex = state.history.findIndex(
             (item) => item.date === calculatedLog.date
           );
+          const existingLog =
+            existingIndex >= 0 ? state.history[existingIndex] : undefined;
+          const isCurrentDay = calculatedLog.date === getTodayKey();
+          const goalReductionActive =
+            isCurrentDay &&
+            state.activeEffects.some(
+              (effect) =>
+                effect.kind === 'goal-reduce' &&
+                effect.expiresAt > Date.now()
+            );
+          const effectiveGoal = goalReductionActive
+            ? userGoal * 0.7
+            : userGoal;
+          const isGoalMet =
+            calculatedLog.steps >= effectiveGoal ||
+            (!isCurrentDay && (existingLog?.goalReached ?? false));
           const wasGoalMet =
-            existingIndex >= 0
-              ? state.history[existingIndex].goalReached
-              : false;
+            existingLog?.goalReached ?? false;
 
           let updatedHistory = [...state.history];
 
@@ -334,6 +490,18 @@ export const useAppStore = create<AppState>()(
           distance: calculateDistanceKm(newLog.steps, stepLengthMeters),
           calories: calculateCalories(newLog.steps, user.weight),
         });
+        const finalizedLog = get().history.find(
+          (log) => log.date === newLog.date
+        );
+        if (!finalizedLog?.goalReached) {
+          get().consumeStreakFreeze(newLog.date);
+        }
+        let missedDate = shiftDate(newLog.date, 1);
+        const today = getTodayKey();
+        while (missedDate < today && get().streakFreezes > 0) {
+          get().consumeStreakFreeze(missedDate);
+          missedDate = shiftDate(missedDate, 1);
+        }
         set({ lastActiveDate: getTodayKey() });
         get().refreshDailyTasks();
         // Trigger 2: بعد انقلاب التاريخ نُبقي جدولة تذكير المساء متزامنة (اليوم غير مكتمل بعد)
@@ -383,8 +551,13 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const task = state.dailyTasks.find((t) => t.id === taskId);
           if (!task || task.completed) return {};
-          const previousCoins = getStoredCoins() ?? state.totalCoins;
-          const newCoins = previousCoins + task.coins;
+          const previousCoins = Math.max(getStoredCoins(), state.totalCoins);
+          const multiplierActive = state.activeEffects.some(
+            (effect) =>
+              effect.kind === 'multiplier' && effect.expiresAt > Date.now()
+          );
+          const newCoins =
+            previousCoins + task.coins * (multiplierActive ? 2 : 1);
           setStoredCoins(newCoins);
           const today = getTodayKey();
           const totalSteps = state.history.reduce(
@@ -493,7 +666,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 7,
+      version: 10,
       onRehydrateStorage: () => (state) => {
         state?.resetDailyQuestProgress();
         state?.refreshDailyTasks();
@@ -506,6 +679,11 @@ export const useAppStore = create<AppState>()(
         user: state.user,
         streakDays: state.streakDays,
         totalCoins: state.totalCoins,
+        activeEffects: state.activeEffects,
+        streakFreezes: state.streakFreezes,
+        frozenDays: state.frozenDays,
+        lastFreeClaimDate: state.lastFreeClaimDate,
+        ownedOffers: state.ownedOffers,
         lastActiveDate: state.lastActiveDate,
         lastResetDate: state.lastResetDate,
         history: state.history,
@@ -534,6 +712,11 @@ export const useAppStore = create<AppState>()(
           },
           streakDays: 0,
           totalCoins: 0,
+          activeEffects: [],
+          streakFreezes: 0,
+          frozenDays: [],
+          lastFreeClaimDate: null,
+          ownedOffers: [],
           lastActiveDate: getTodayKey(),
           lastResetDate: new Date().toISOString().split('T')[0],
           history: [],
@@ -594,6 +777,8 @@ export const useAppStore = create<AppState>()(
             dailyProgress: version < 6 ? {} : (task.dailyProgress ?? {}),
           };
         });
+        const migrateRingStyleId = (id: string) =>
+          id === 'hourglass-ring' ? 'spiral-ring' : id;
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,
@@ -605,6 +790,23 @@ export const useAppStore = create<AppState>()(
           },
           // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
           activeTheme: legacyActiveTheme,
+          activeRingStyle: migrateRingStyleId(
+            persisted.activeRingStyle ?? defaultRingStyleId
+          ),
+          ownedRingStyles: (
+            persisted.ownedRingStyles ?? fallback.ownedRingStyles
+          ).map(migrateRingStyleId),
+          activeEffects: persisted.activeEffects ?? [],
+          streakFreezes:
+            persisted.streakFreezes ??
+            (persisted.ownedOffers ?? []).filter(
+              (id) =>
+                offers.find((offer) => offer.id === id)?.kind ===
+                'streak-freeze'
+            ).length,
+          frozenDays: persisted.frozenDays ?? [],
+          lastFreeClaimDate: persisted.lastFreeClaimDate ?? null,
+          ownedOffers: persisted.ownedOffers ?? [],
           // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
           dailyTasks: migratedTasks,
         } as AppState;

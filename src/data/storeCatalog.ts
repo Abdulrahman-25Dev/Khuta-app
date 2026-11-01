@@ -46,11 +46,11 @@ export const appThemes: AppTheme[] = [
   },
   {
     id: 'warm-sunset',
-    name: 'الوردي النيون',
-    nameKey: 'store.themes.warmSunset',
+    name: 'عنبر الغروب',
+    nameKey: 'store.themes.sunsetAmber',
     price: 600,
-    accent: '#FF2A85',
-    secondaryGlow: '#FF75B5',
+    accent: '#F59E0B',
+    secondaryGlow: '#FCD34D',
   },
   {
     id: 'sunset-coral',
@@ -79,30 +79,64 @@ export const appThemes: AppTheme[] = [
   },
   {
     id: 'aurora-purple',
-    name: 'الأورورا البنفسجية',
-    nameKey: 'store.themes.auroraPurple',
+    name: 'التركواز الشفقي',
+    nameKey: 'store.themes.auroraTeal',
     price: 1500,
-    accent: '#A78BFA',
-    secondaryGlow: '#DDD6FE',
+    accent: '#0F766E',
+    secondaryGlow: '#5EEAD4',
     premium: true,
   },
   {
     id: 'royal-deep-violet',
-    name: 'البنفسجي الملكي',
-    nameKey: 'store.themes.royalDeepViolet',
+    name: 'القرمزي الملكي',
+    nameKey: 'store.themes.royalCrimson',
     price: 2200,
-    accent: '#8B5CF6',
-    secondaryGlow: '#C4B5FD',
+    accent: '#BE123C',
+    secondaryGlow: '#FDA4AF',
     premium: true,
   },
   {
     id: 'luxe-black',
-    name: 'الذهبي الفاخر',
-    nameKey: 'store.themes.luxeBlack',
+    name: 'الفضي الفاخر',
+    nameKey: 'store.themes.luxeSilver',
     price: 3200,
-    accent: '#FFD700',
-    secondaryGlow: '#FFF066',
+    accent: '#C0C0C0',
+    secondaryGlow: '#F1F5F9',
     premium: true,
+  },
+  {
+    id: 'polar-aurora',
+    name: 'الشفق القطبي',
+    nameKey: 'store.themes.polarAurora',
+    price: 1800,
+    accent: '#FF007F',
+    secondaryGlow: '#FF80BF',
+    premium: true,
+  },
+  {
+    id: 'royal-gold',
+    name: 'الذهب الملكي',
+    nameKey: 'store.themes.royalGold',
+    price: 2400,
+    accent: '#D4AF37',
+    secondaryGlow: '#F3DF8A',
+    premium: true,
+  },
+  {
+    id: 'deep-navy',
+    name: 'النيلي الملكي',
+    nameKey: 'store.themes.deepNavy',
+    price: 1100,
+    accent: '#4338CA',
+    secondaryGlow: '#A5B4FC',
+  },
+  {
+    id: 'mint-calm',
+    name: 'النعناع الهادئ',
+    nameKey: 'store.themes.mintCalm',
+    price: 800,
+    accent: '#98FF98',
+    secondaryGlow: '#D1FFD1',
   },
 ];
 
@@ -119,7 +153,11 @@ export type RingStyleKind =
   | 'dotted-flow'
   | 'dash'
   | 'pulse'
-  | 'arc';
+  | 'arc'
+  | 'spiral'
+  | 'star'
+  | 'cube'
+  | 'zigzag';
 
 export interface RingStyle {
   id: string;
@@ -206,9 +244,132 @@ export const ringStyles: RingStyle[] = [
     accent: '#FFD700',
     premium: true,
   },
+  {
+    id: 'spiral-ring',
+    name: 'الحلزون',
+    nameKey: 'store.rings.spiral',
+    price: 900,
+    kind: 'spiral',
+    accent: '#F59E0B',
+  },
+  {
+    id: 'star-ring',
+    name: 'النجمة',
+    nameKey: 'store.rings.star',
+    price: 1400,
+    kind: 'star',
+    accent: '#FACC15',
+    premium: true,
+  },
+  {
+    id: 'cube-ring',
+    name: 'المكعب',
+    nameKey: 'store.rings.cube',
+    price: 2200,
+    kind: 'cube',
+    accent: '#38BDF8',
+    premium: true,
+  },
+  {
+    id: 'zigzag-ring',
+    name: 'المسار المتعرج',
+    nameKey: 'store.rings.zigzag',
+    price: 2800,
+    kind: 'zigzag',
+    accent: '#A78BFA',
+    premium: true,
+  },
 ];
 
 export const defaultRingStyleId = ringStyles[0].id;
+
+// ————— العروض —————
+export type OfferKind =
+  | 'coin-box'
+  | 'streak-freeze'
+  | 'multiplier'
+  | 'goal-reduce'
+  | 'daily-free';
+
+export interface Offer {
+  id: string;
+  nameKey: string;
+  descriptionKey: string;
+  price: number;
+  kind: OfferKind;
+  value: number;
+  premium?: boolean;
+}
+
+export const offers: Offer[] = [
+  {
+    id: 'coin-box-500',
+    nameKey: 'offers.items.coinBox500.name',
+    descriptionKey: 'offers.items.coinBox500.desc',
+    price: 400,
+    kind: 'coin-box',
+    value: 500,
+  },
+  {
+    id: 'coin-box-2000',
+    nameKey: 'offers.items.coinBox2000.name',
+    descriptionKey: 'offers.items.coinBox2000.desc',
+    price: 1400,
+    kind: 'coin-box',
+    value: 2000,
+    premium: true,
+  },
+  {
+    id: 'streak-freeze-1',
+    nameKey: 'offers.items.streakFreeze1.name',
+    descriptionKey: 'offers.items.streakFreeze1.desc',
+    price: 300,
+    kind: 'streak-freeze',
+    value: 1,
+  },
+  {
+    id: 'streak-freeze-3',
+    nameKey: 'offers.items.streakFreeze3.name',
+    descriptionKey: 'offers.items.streakFreeze3.desc',
+    price: 700,
+    kind: 'streak-freeze',
+    value: 3,
+    premium: true,
+  },
+  {
+    id: 'multiplier-24h',
+    nameKey: 'offers.items.multiplier24h.name',
+    descriptionKey: 'offers.items.multiplier24h.desc',
+    price: 800,
+    kind: 'multiplier',
+    value: 2,
+  },
+  {
+    id: 'multiplier-7d',
+    nameKey: 'offers.items.multiplier7d.name',
+    descriptionKey: 'offers.items.multiplier7d.desc',
+    price: 2500,
+    kind: 'multiplier',
+    value: 2,
+    premium: true,
+  },
+  {
+    id: 'goal-reduce-1d',
+    nameKey: 'offers.items.goalReduce1d.name',
+    descriptionKey: 'offers.items.goalReduce1d.desc',
+    price: 400,
+    kind: 'goal-reduce',
+    value: 30,
+  },
+  {
+    id: 'daily-free',
+    nameKey: 'offers.dailyFree.title',
+    descriptionKey: 'offers.dailyFree.desc',
+    price: 0,
+    kind: 'daily-free',
+    value: 10,
+  },
+];
 
 // ————— خلفيات البروفايل —————
 export type BadgeIconName =

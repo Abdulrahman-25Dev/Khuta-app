@@ -144,8 +144,10 @@
     "tabs": {
       "themes": "App themes",
       "rings": "Ring styles",
+      "offers": "Offers",
       "themesHint": "Color gradients applied across the app",
-      "ringsHint": "Progress ring effects on the steps screen"
+      "ringsHint": "Progress ring effects on the steps screen",
+      "offersHint": "Offers and rewards to support your journey"
     },
     "apply": "Apply",
     "buy": "Buy",
@@ -164,13 +166,17 @@
       "crystalBlue": "Crystal Blue",
       "turquoiseNight": "Glowing Turquoise",
       "mintWave": "Nitrogen Green",
-      "warmSunset": "Neon Pink",
+      "sunsetAmber": "Sunset Amber",
       "sunsetCoral": "Solar Coral",
       "forestEmerald": "Sporty Lime",
       "royalViolet": "Radiant Coral",
-      "auroraPurple": "Purple Aurora",
-      "royalDeepViolet": "Royal Violet",
-      "luxeBlack": "Luxury Gold"
+      "auroraTeal": "Aurora Teal",
+      "royalCrimson": "Royal Crimson",
+      "luxeSilver": "Luxe Silver",
+      "polarAurora": "Polar Aurora",
+      "royalGold": "Royal Gold",
+      "deepNavy": "Royal Indigo",
+      "mintCalm": "Calm Mint"
     },
     "rings": {
       "ticksDefault": "Classic Ticks",
@@ -181,7 +187,11 @@
       "pulseRing": "Progress Pulse",
       "doubleRing": "Double Ring",
       "arcRing": "Interwoven Path",
-      "boostRing": "Diamond Circle"
+      "boostRing": "Diamond Circle",
+      "spiral": "Spiral",
+      "star": "Star",
+      "cube": "Cube",
+      "zigzag": "Zigzag Path"
     },
     "banners": {
       "default": "Original",
@@ -192,6 +202,54 @@
       "midnight": "Midnight",
       "royal": "Royal",
       "cosmic": "Cosmic"
+    }
+  },
+  "offers": {
+    "title": "Offers",
+    "claim": "Claim",
+    "claimed": "Claimed today",
+    "buy": "Buy",
+    "activate": "Activate",
+    "activeUntil": "Active until {{date}}",
+    "effectAlreadyActiveUntil": "Already active until {{date}}",
+    "purchased": "Purchase complete",
+    "purchasedMsg": "The offer has been added to your balance or inventory.",
+    "activated": "Activated",
+    "activatedMsg": "The offer is now active.",
+    "dailyFree": {
+      "title": "Free Daily Box",
+      "desc": "Get 10 coins for free every day!",
+      "claimed": "Claimed today"
+    },
+    "items": {
+      "coinBox500": {
+        "name": "500-Coin Box",
+        "desc": "Add 500 coins to your balance instantly"
+      },
+      "coinBox2000": {
+        "name": "2,000-Coin Box",
+        "desc": "Add 2,000 coins to your balance instantly"
+      },
+      "streakFreeze1": {
+        "name": "Streak Freeze (1 Day)",
+        "desc": "Protect your streak for one day if you miss a day"
+      },
+      "streakFreeze3": {
+        "name": "Streak Freeze (3 Days)",
+        "desc": "Protect your streak for three days"
+      },
+      "multiplier24h": {
+        "name": "Coin Multiplier (24 Hours)",
+        "desc": "Double your step coins for one day"
+      },
+      "multiplier7d": {
+        "name": "Coin Multiplier (7 Days)",
+        "desc": "Double your step coins for one week"
+      },
+      "goalReduce1d": {
+        "name": "Goal Reduction (1 Day)",
+        "desc": "Reduce your daily goal by 30% for one day"
+      }
     }
   },
   "levels": {
