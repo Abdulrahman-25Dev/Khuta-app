@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../context/ThemeContext';
 import { hideCustomModal, useModalStore } from '../store/useModalStore';
@@ -22,10 +23,14 @@ export function CustomModal({
   visible,
   title,
   message,
-  buttons = [{ text: 'حسناً' }],
+  buttons,
   onClose,
 }: CustomModalProps) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
   const { accent, bg, card, border, text, subText } = useTheme();
+  const resolvedButtons = buttons ?? [{ text: t('common.ok') }];
 
   return (
     <Modal
@@ -60,8 +65,8 @@ export function CustomModal({
             </Text>
           ) : null}
 
-          <View className="mt-5 flex-row-reverse justify-end gap-2">
-            {buttons.map((button, index) => {
+          <View className={`mt-5 ${rowDirection} justify-end gap-2`}>
+            {resolvedButtons.map((button, index) => {
               const isPrimary = button.variant !== 'secondary';
 
               return (

@@ -1,10 +1,17 @@
 import React, { useEffect, useState, forwardRef } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  type KeyboardTypeOptions,
+} from 'react-native';
 import BottomSheet, { 
   BottomSheetView, 
   BottomSheetBackdrop, 
-  BottomSheetTextInput 
+  BottomSheetTextInput,
+  type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../context/ThemeContext';
 
@@ -17,6 +24,10 @@ interface Props {
 
 export const EditProfileModal = forwardRef<BottomSheet, Props>(
   ({ activeField, onClose }, ref) => {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const { user, updateUser } = useAppStore();
   const { accent, isDark, bg, card, border, text, subText } = useTheme();
   const [value, setValue] = useState('');
@@ -36,22 +47,47 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
     onClose();
   };
 
-  const renderBackdrop = (props: any) => (
+  const renderBackdrop = (props: BottomSheetBackdropProps) => (
     <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
   );
 
   const getFieldConfig = () => {
     switch (activeField) {
       case 'name':
-        return { title: 'تعديل اسم المستخدم', placeholder: 'أدخل الاسم', keyboard: 'default', unit: '' };
+        return {
+          title: t('profile.edit.nameTitle'),
+          placeholder: t('profile.edit.namePlaceholder'),
+          keyboard: 'default' as KeyboardTypeOptions,
+          unit: '',
+        };
       case 'weight':
-        return { title: 'تعديل الوزن', placeholder: 'مثال: 70', keyboard: 'numeric', unit: 'كجم' };
+        return {
+          title: t('profile.edit.weightTitle'),
+          placeholder: t('profile.edit.weightPlaceholder'),
+          keyboard: 'numeric' as KeyboardTypeOptions,
+          unit: t('home.weightKg'),
+        };
       case 'height':
-        return { title: 'تعديل الطول', placeholder: 'مثال: 170', keyboard: 'numeric', unit: 'سم' };
+        return {
+          title: t('profile.edit.heightTitle'),
+          placeholder: t('profile.edit.heightPlaceholder'),
+          keyboard: 'numeric' as KeyboardTypeOptions,
+          unit: t('home.heightCm'),
+        };
       case 'dailyGoal':
-        return { title: 'تعديل الهدف اليومي', placeholder: 'مثال: 6000', keyboard: 'numeric', unit: 'خطوة' };
+        return {
+          title: t('profile.edit.dailyGoalTitle'),
+          placeholder: t('profile.edit.dailyGoalPlaceholder'),
+          keyboard: 'numeric' as KeyboardTypeOptions,
+          unit: t('home.stepsUnit'),
+        };
       default:
-        return { title: '', placeholder: '', keyboard: 'default', unit: '' };
+        return {
+          title: '',
+          placeholder: '',
+          keyboard: 'default' as KeyboardTypeOptions,
+          unit: '',
+        };
     }
   };
 
@@ -77,11 +113,14 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
         </Text>
 
         <View
-          className="flex-row items-center border rounded-xl px-4 py-1"
+          className={`${rowDirection} items-center border rounded-xl px-4 py-1`}
           style={{ backgroundColor: bg, borderColor: border }}
         >
           {config.unit !== '' && (
-            <Text className="font-bold text-base mr-2" style={{ color: subText }}>
+            <Text
+              className={`font-bold text-base ${i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}`}
+              style={{ color: subText }}
+            >
               {config.unit}
             </Text>
           )}
@@ -91,7 +130,7 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
             placeholder={config.placeholder}
             placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
             keyboardType={config.keyboard as any}
-            className="flex-1 p-3 text-right text-base font-semibold"
+            className={`flex-1 p-3 ${textAlignment} text-base font-semibold`}
             style={{ color: text }}
             autoFocus
           />
@@ -103,7 +142,9 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
           style={{ backgroundColor: accent }}
           className="p-4 rounded-xl items-center mt-4 mb-2"
         >
-          <Text className="text-white font-bold text-base">حفظ التعديلات</Text>
+          <Text className="text-white font-bold text-base">
+            {t('profile.edit.saveChanges')}
+          </Text>
         </TouchableOpacity>
       </BottomSheetView>
     </BottomSheet>

@@ -24,6 +24,7 @@ import Svg, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronRight,
   Coins,
@@ -51,16 +52,20 @@ const shopThemes = appThemes.filter((t) => t.id !== defaultThemeId);
 
 type TabKey = 'themes' | 'rings';
 
-const TABS: { key: TabKey; label: string; hint: string }[] = [
+const TABS: {
+  key: TabKey;
+  labelKey: 'store.tabs.themes' | 'store.tabs.rings';
+  hintKey: 'store.tabs.themesHint' | 'store.tabs.ringsHint';
+}[] = [
   {
     key: 'themes',
-    label: 'ألوان التطبيق',
-    hint: 'تدرجات تُطبَّق على التطبيق بالكامل',
+    labelKey: 'store.tabs.themes',
+    hintKey: 'store.tabs.themesHint',
   },
   {
     key: 'rings',
-    label: 'أنماط العداد',
-    hint: 'تأثير حلقة التقدم في شاشة الخطوات اليوميّة',
+    labelKey: 'store.tabs.rings',
+    hintKey: 'store.tabs.ringsHint',
   },
 ];
 
@@ -73,7 +78,9 @@ const formatNumber = (n: number) => n.toLocaleString('en-US');
 
 // شارة الحالة: علامة للمفعّل، تاج للمميزة، قفل للمقفلة
 const StatusBadge = memo(function StatusBadge({ type }: { type: BadgeType }) {
+  const { i18n } = useTranslation();
   const { bg, border } = useTheme();
+  const badgeSide = i18n.dir() === 'rtl' ? 'right-1.5' : 'left-1.5';
   const wrap =
     type === 'active'
       ? 'bg-emerald-500'
@@ -95,7 +102,7 @@ const StatusBadge = memo(function StatusBadge({ type }: { type: BadgeType }) {
 
   return (
     <View
-      className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full items-center justify-center ${wrap}`}
+      className={`absolute top-1.5 ${badgeSide} w-6 h-6 rounded-full items-center justify-center ${wrap}`}
       style={wrapStyle}
     >
       {icon}
@@ -109,7 +116,10 @@ const ActivePlaceholder = memo(function ActivePlaceholder({
 }: {
   accent: string;
 }) {
+  const { t, i18n } = useTranslation();
   const { bg, border } = useTheme();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
 
   return (
     <View
@@ -120,13 +130,13 @@ const ActivePlaceholder = memo(function ActivePlaceholder({
         height: 42,
       }}
     >
-      <View className="flex-row-reverse items-center gap-1 opacity-70">
+      <View className={`${rowDirection} items-center gap-1 opacity-70`}>
         <View
           className="h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: accent }}
         />
         <Text className="text-[10px] font-bold" style={{ color: accent }}>
-          نشط
+          {t('store.active')}
         </Text>
       </View>
     </View>
@@ -146,12 +156,15 @@ const ActionButton = memo(function ActionButton({
   primary: string;
   secondary?: string;
 }) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
   if (state === 'active') {
     return (
       <View>
         <View className="h-5 items-center justify-center mb-1.5 opacity-60">
           <Text className="text-[9px] font-bold" style={{ color: primary }}>
-            محدد
+            {t('store.owned')}
           </Text>
         </View>
         <ActivePlaceholder accent={primary} />
@@ -173,7 +186,7 @@ const ActionButton = memo(function ActionButton({
         }}
         className="items-center"
       >
-        <Text className="text-white font-bold text-sm">تطبيق</Text>
+        <Text className="text-white font-bold text-sm">{t('store.apply')}</Text>
       </TouchableOpacity>
     );
   }
@@ -188,11 +201,11 @@ const ActionButton = memo(function ActionButton({
         paddingVertical: 10,
         borderRadius: 8,
       }}
-      className="items-center border flex-row justify-center gap-1"
+      className={`items-center border ${rowDirection} justify-center gap-1`}
     >
       <Coins color={primary} size={14} />
       <Text style={{ color: primary }} className="font-bold text-sm">
-        شراء {formatNumber(price ?? 0)}
+        {t('store.buyPrice', { price: formatNumber(price ?? 0) })}
       </Text>
     </TouchableOpacity>
   );
@@ -212,6 +225,10 @@ const ThemeCard = memo(function ThemeCard({
   onApply: (id: string) => void;
   onBuy: (item: AppTheme, price: number) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const { card, border, text } = useTheme();
   const badge: BadgeType | undefined = isActive
     ? 'active'
@@ -270,11 +287,11 @@ const ThemeCard = memo(function ThemeCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className="text-xs font-bold text-right" style={{ color: text }}>
-          {item.name}
+        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+          {t(item.nameKey)}
         </Text>
         {!owned && (
-          <View className="flex-row-reverse items-center gap-1 mt-0.5">
+          <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={item.accent} size={10} />
             <Text
               style={{ color: item.accent }}
@@ -642,6 +659,10 @@ const RingStyleCard = memo(function RingStyleCard({
   onApply: (id: string) => void;
   onBuy: (item: RingStyle, price: number) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const { card, border, text } = useTheme();
   const badge: BadgeType | undefined = isActive
     ? 'active'
@@ -701,11 +722,11 @@ const RingStyleCard = memo(function RingStyleCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className="text-xs font-bold text-right" style={{ color: text }}>
-          {item.name}
+        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+          {t(item.nameKey)}
         </Text>
         {!owned && (
-          <View className="flex-row-reverse items-center gap-1 mt-0.5">
+          <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={item.accent} size={10} />
             <Text
               style={{ color: item.accent }}
@@ -750,6 +771,10 @@ const BannerCard = memo(function BannerCard({
   onApply: (id: string) => void;
   onBuy: (item: ProfileBanner, price: number) => void;
 }) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const { card, border, text } = useTheme();
   const badge: BadgeType | undefined = isActive
     ? 'active'
@@ -801,11 +826,11 @@ const BannerCard = memo(function BannerCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className="text-xs font-bold text-right" style={{ color: text }}>
-          {item.name}
+        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+          {t(item.nameKey)}
         </Text>
         {!owned && (
-          <View className="flex-row-reverse items-center gap-1 mt-0.5">
+          <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={primary} size={10} />
             <Text style={{ color: primary }} className="text-[10px] font-bold">
               {formatNumber(item.price)}
@@ -831,12 +856,11 @@ const BannerCard = memo(function BannerCard({
   );
 });
 
-const INSUFFICIENT = 'رصيد غير كافٍ';
-const INSUFFICIENT_MSG =
-  'أكمل مهامك اليومية وبلوغ الهدف لجمع المزيد من العملات.';
-
 export default function StoreScreen() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
+  const isRtl = i18n.dir() === 'rtl';
+  const rowDirection = isRtl ? 'flex-row-reverse' : 'flex-row';
   const [activeTab, setActiveTab] = useState<TabKey>('themes');
 
   // اشتراكات انتقائية: قراءة كل حقل على حدة حتى لا يُعاد رسم الشاشة عند تغيير
@@ -876,63 +900,66 @@ export default function StoreScreen() {
     (item: AppTheme, price: number) => {
       if (totalCoins < price) {
         showCustomModal({
-          title: INSUFFICIENT,
-          message: INSUFFICIENT_MSG,
+          title: t('store.insufficient'),
+          message: t('store.insufficientMsg'),
         });
         return;
       }
       if (purchaseTheme(item.id, price)) {
         showCustomModal({
-          title: 'تم الشراء',
-          message: 'أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».',
+          title: t('store.purchased'),
+          message: t('store.purchasedThemeMsg'),
         });
       }
     },
-    [totalCoins, purchaseTheme]
+    [totalCoins, purchaseTheme, t]
   );
 
   const handleBuyBanner = useCallback(
     (item: ProfileBanner, price: number) => {
       if (totalCoins < price) {
         showCustomModal({
-          title: INSUFFICIENT,
-          message: INSUFFICIENT_MSG,
+          title: t('store.insufficient'),
+          message: t('store.insufficientMsg'),
         });
         return;
       }
       if (purchaseProfileBanner(item.id, price)) {
         showCustomModal({
-          title: 'تم الشراء',
-          message: 'أُضيفت الخلفية إلى مكتبتك، فعّلها من زر «تطبيق».',
+          title: t('store.purchased'),
+          message: t('store.purchasedBannerMsg'),
         });
       }
     },
-    [totalCoins, purchaseProfileBanner]
+    [totalCoins, purchaseProfileBanner, t]
   );
 
   const handleBuyRingStyle = useCallback(
     (item: RingStyle, price: number) => {
       if (totalCoins < price) {
         showCustomModal({
-          title: INSUFFICIENT,
-          message: INSUFFICIENT_MSG,
+          title: t('store.insufficient'),
+          message: t('store.insufficientMsg'),
         });
         return;
       }
       if (purchaseRingStyle(item.id, price)) {
         showCustomModal({
-          title: 'تم الشراء',
-          message: 'أُضيف نمط العداد إلى مكتبتك، فعّله من زر «تطبيق».',
+          title: t('store.purchased'),
+          message: t('store.purchasedRingMsg'),
         });
       }
     },
-    [totalCoins, purchaseRingStyle]
+    [totalCoins, purchaseRingStyle, t]
   );
 
   // ————— عرض الشبكة عبر FlatList (معزول ولم يُعاد إنشاؤه إلا عند تغيّر الحالة ذات الصلة) —————
   const renderThemeItem = useCallback(
     ({ item }: { item: AppTheme }) => (
-      <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
+      <View
+        style={isRtl ? { transform: [{ scaleX: -1 }] } : undefined}
+        className="flex-1"
+      >
         <ThemeCard
           item={item}
           isActive={
@@ -944,12 +971,15 @@ export default function StoreScreen() {
         />
       </View>
     ),
-    [activeTheme, ownedThemes, handleApplyTheme, handleBuyTheme]
+    [activeTheme, ownedThemes, handleApplyTheme, handleBuyTheme, isRtl]
   );
 
   const renderRingStyleItem = useCallback(
     ({ item }: { item: RingStyle }) => (
-      <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
+      <View
+        style={isRtl ? { transform: [{ scaleX: -1 }] } : undefined}
+        className="flex-1"
+      >
         <RingStyleCard
           item={item}
           isActive={item.id === activeRingStyle}
@@ -959,7 +989,7 @@ export default function StoreScreen() {
         />
       </View>
     ),
-    [activeRingStyle, ownedRingStyles, handleApplyRingStyle, handleBuyRingStyle]
+    [activeRingStyle, ownedRingStyles, handleApplyRingStyle, handleBuyRingStyle, isRtl]
   );
 
   const activeTabData = TABS.find((t) => t.key === activeTab);
@@ -971,7 +1001,7 @@ export default function StoreScreen() {
       {/* الرأس: رصيد العملات يميناً، زر العودة يساراً، والعنوان في المنتصف */}
       <View className="relative flex-row items-center justify-center py-3 px-4">
         <View
-          className="absolute left-4 top-3 flex-row-reverse items-center gap-1 border px-3 py-1.5 rounded-full"
+          className={`absolute top-3 ${isRtl ? 'left-4' : 'right-4'} ${rowDirection} items-center gap-1 border px-3 py-1.5 rounded-full`}
           style={{ backgroundColor: card, borderColor: border }}
         >
           <Coins color={accent} size={15} />
@@ -981,23 +1011,27 @@ export default function StoreScreen() {
         </View>
 
         <Text className="text-base font-black" style={{ color: text }}>
-          متجر المظهر
+          {t('store.title')}
         </Text>
 
         <TouchableOpacity
           onPress={() => router.back()}
           activeOpacity={0.8}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          className="absolute right-4 w-9 h-9 rounded-full border items-center justify-center"
+          className={`absolute ${isRtl ? 'right-4' : 'left-4'} w-9 h-9 rounded-full border items-center justify-center`}
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <ChevronRight color={accent} size={20} />
+          <ChevronRight
+            color={accent}
+            size={20}
+            style={isRtl ? undefined : { transform: [{ scaleX: -1 }] }}
+          />
         </TouchableOpacity>
       </View>
 
       {/* شريط التبويبات */}
       <View
-        className="mx-4 mt-4 mb-3 flex-row-reverse rounded-2xl border p-1"
+        className={`mx-4 mt-4 mb-3 ${rowDirection} rounded-2xl border p-1`}
         style={{ backgroundColor: card, borderColor: border }}
       >
         {TABS.map((tab) => {
@@ -1014,7 +1048,7 @@ export default function StoreScreen() {
                 className="text-sm font-bold"
                 style={{ color: isActive ? '#FFFFFF' : subText }}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -1025,12 +1059,12 @@ export default function StoreScreen() {
         className="text-xs font-bold text-center mb-3 px-6"
         style={{ color: subText }}
       >
-        {activeTabData?.hint}
+        {activeTabData ? t(activeTabData.hintKey) : null}
       </Text>
 
       {/* المحتوى حسب التبويب */}
       {activeTab === 'themes' ? (
-        <RtlGrid>
+        <RtlGrid isRtl={isRtl}>
           <FlatList<AppTheme>
             key="themes"
             data={shopThemes}
@@ -1051,7 +1085,7 @@ export default function StoreScreen() {
           />
         </RtlGrid>
       ) : (
-        <RtlGrid>
+        <RtlGrid isRtl={isRtl}>
           <FlatList<RingStyle>
             key="rings"
             data={ringStyles}
@@ -1077,8 +1111,17 @@ export default function StoreScreen() {
 }
 
 // كامل الشبكة معكوسة لتدفق البطاقات من اليمين لليسار (RTL)، وكل بطاقة تُعاد لعكس صورتها
-const RtlGrid = ({ children }: { children: ReactNode }) => (
-  <View style={{ transform: [{ scaleX: -1 }] }} className="flex-1">
+const RtlGrid = ({
+  children,
+  isRtl,
+}: {
+  children: ReactNode;
+  isRtl: boolean;
+}) => (
+  <View
+    style={isRtl ? { transform: [{ scaleX: -1 }] } : undefined}
+    className="flex-1"
+  >
     {children}
   </View>
 );

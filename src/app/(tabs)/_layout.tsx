@@ -1,11 +1,13 @@
 import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Footprints, User, BarChart3 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 
 // سطح شريط التبويب: يتبع السياق الذرّي (نفس إطار قراءة المتجر) فلا يتأخر
 // لون الشريط عن لون الكروت والخلفية أثناء تبديل الوضع الفاتح/الداكن.
 export default function TabLayout() {
+  const { t } = useTranslation();
   const { isDarkMode, accent, card, border } = useTheme();
 
   const inactiveColor = isDarkMode ? '#8B949E' : '#94A3B8';
@@ -30,21 +32,21 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'الرئيسية',
+            title: t('tabs.home'),
             tabBarIcon: ({ color, size }) => <Footprints color={color} size={size} />,
           }}
         />
         <Tabs.Screen
           name="History"
           options={{
-            title: 'السجل',
+            title: t('tabs.history'),
             tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} />,
           }}
         />
         <Tabs.Screen
           name="Profile"
           options={{
-            title: 'الملف الشخصي',
+            title: t('tabs.profile'),
             tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
           }}
         />

@@ -1,3 +1,5 @@
+import { i18n } from '../i18n/i18next';
+
 export type TaskType = 'steps' | 'distance' | 'calories' | 'duration';
 
 export interface Task {
@@ -17,35 +19,31 @@ export interface Task {
   dailyProgress: Record<string, number>;
 }
 
-export function getTaskTimeframe(days: number): string {
-  const safeDays = Math.max(1, Math.floor(days || 1));
-  switch (safeDays) {
-    case 1:
-      return 'اليوم';
-    case 2:
-      return 'خلال يومين';
-    default:
-      return `خلال ${safeDays} أيام`;
-  }
-}
+export type TaskTimeframeKey =
+  | 'tasks.today'
+  | 'tasks.withinTwoDays'
+  | 'tasks.withinDays';
 
 export function getTaskTimeframeKey(
   days: number
-): 'tasks.today' | 'tasks.withinTwoDays' | 'tasks.withinDays' {
+): TaskTimeframeKey {
   const safeDays = Math.max(1, Math.floor(days || 1));
   if (safeDays === 1) return 'tasks.today';
   if (safeDays === 2) return 'tasks.withinTwoDays';
   return 'tasks.withinDays';
 }
 
+export function getTaskTimeframe(days: number): string {
+  const safeDays = Math.max(1, Math.floor(days || 1));
+  return i18n.t(getTaskTimeframeKey(safeDays), { count: safeDays });
+}
+
 interface TaskTemplate {
   type: TaskType;
   min: number;
   max: number;
-  unit: string;
   unitKey: string;
   titleKeys: string[];
-  fallbackTitles: string[];
 }
 
 const TASK_TEMPLATES: TaskTemplate[] = [
@@ -53,37 +51,29 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     type: 'steps',
     min: 3000,
     max: 12000,
-    unit: 'خطوة',
     unitKey: 'tasks.types.steps.unit',
     titleKeys: ['tasks.types.steps.title_0', 'tasks.types.steps.title_1'],
-    fallbackTitles: ['تحدي الخطوات', 'خطوات اليوم'],
   },
   {
     type: 'distance',
     min: 2,
     max: 8,
-    unit: 'كم',
     unitKey: 'tasks.types.distance.unit',
     titleKeys: ['tasks.types.distance.title_0', 'tasks.types.distance.title_1'],
-    fallbackTitles: ['تحدي المسافة', 'مسافة المشي'],
   },
   {
     type: 'calories',
     min: 150,
     max: 500,
-    unit: 'سعرة',
     unitKey: 'tasks.types.calories.unit',
     titleKeys: ['tasks.types.calories.title_0', 'tasks.types.calories.title_1'],
-    fallbackTitles: ['تحدي السعرات', 'حارق السعرات'],
   },
   {
     type: 'duration',
     min: 20,
     max: 60,
-    unit: 'دقيقة',
     unitKey: 'tasks.types.duration.unit',
     titleKeys: ['tasks.types.duration.title_0', 'tasks.types.duration.title_1'],
-    fallbackTitles: ['وقت النشاط', 'حركية الجلسة'],
   },
 ];
 
@@ -151,16 +141,17 @@ function createTask(
   const raw = randInt(rng, template.min, template.max);
   const target = Math.max(template.min, Math.round(raw * factor));
   const titleIndex = randInt(rng, 0, template.titleKeys.length - 1);
+  const titleKey = template.titleKeys[titleIndex];
   const days = getTaskDays(template.type, target);
   const startDate = dateString.slice(0, 10);
 
   return {
     id: `${dateString}:${template.type}`,
     type: template.type,
-    title: template.fallbackTitles[titleIndex],
-    titleKey: template.titleKeys[titleIndex],
+    title: i18n.t(titleKey),
+    titleKey,
     target,
-    unit: template.unit,
+    unit: i18n.t(template.unitKey),
     unitKey: template.unitKey,
     coins: getTaskCoins(template.type, target),
     completed: false,

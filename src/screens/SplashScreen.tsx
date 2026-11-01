@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../context/ThemeContext';
 
@@ -18,6 +19,7 @@ const LOGO_SIZE = 124;
 
 export default function SplashScreenRoute() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { accent, bg, subText } = useTheme();
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.8);
@@ -98,9 +100,11 @@ export default function SplashScreenRoute() {
           ]}
           numberOfLines={1}
         >
-          خطى
+          {t('app.name')}
         </Animated.Text>
-        <Text style={[styles.tagline, { color: subText }]}>حُركتك.. ثروتك</Text>
+        <Text style={[styles.tagline, { color: subText }]}>
+          {t('splash.tagline')}
+        </Text>
       </View>
     </View>
   );

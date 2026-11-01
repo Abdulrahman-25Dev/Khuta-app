@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   AppState,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -129,8 +130,16 @@ const PulseRing = ({
   );
 };
 
+type PedometerStatusKey =
+  | 'home.notAvailable'
+  | 'home.permissionRequired'
+  | 'home.sensorError';
+
 export default function HomeScreen() {
+  const { t, i18n } = useTranslation();
   const { user, addCoins, totalCoins, activeRingStyle } = useAppStore();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
   // كامل الألوان من السياق الذرّي في نفس إطار القراءة (لا انفصال بين الخلفية والكروت)
   const { isDarkMode, accent, bg, card, border, text, subText } = useTheme();
   const selectedRingStyle =
@@ -271,7 +280,8 @@ export default function HomeScreen() {
   };
 
   // تتبع حساس الخطوات
-  const [pedometerStatus, setPedometerStatus] = useState<string>('');
+  const [pedometerStatus, setPedometerStatus] =
+    useState<PedometerStatusKey | null>(null);
   const pedometerSubscription = useRef<Pedometer.Subscription | null>(null);
 
   const stopTracking = () => {
@@ -283,18 +293,18 @@ export default function HomeScreen() {
 
   const startTracking = async () => {
     stopTracking(); // Always purge existing active listeners first
-    setPedometerStatus('');
+    setPedometerStatus(null);
 
     try {
       const isAvailable = await Pedometer.isAvailableAsync();
       if (!isAvailable) {
-        setPedometerStatus('غير متاح على هذا الجهاز');
+        setPedometerStatus('home.notAvailable');
         return;
       }
 
       const permission = await Pedometer.requestPermissionsAsync();
       if (!permission.granted) {
-        setPedometerStatus('يرجى تفعيل إذن الحركة في الإعدادات');
+        setPedometerStatus('home.permissionRequired');
         return;
       }
 
@@ -328,7 +338,7 @@ export default function HomeScreen() {
       });
     } catch (error) {
       console.log('Pedometer Error:', error);
-      setPedometerStatus('خطأ في مستشعر الخطوات');
+      setPedometerStatus('home.sensorError');
     }
   };
 
@@ -722,18 +732,18 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View className="flex-row-reverse justify-between items-center mb-5">
+        <View className={`${rowDirection} justify-between items-center mb-5`}>
           <Text className="text-2xl font-bold" style={{ color: text }}>
-            خُطى <Text style={{ color: accent }}>.</Text>
+            {t('app.name')} <Text style={{ color: accent }}>.</Text>
           </Text>
 
           <View
-            className="flex-row-reverse items-center px-3.5 py-2 rounded-full border gap-1.5"
+            className={`${rowDirection} items-center px-3.5 py-2 rounded-full border gap-1.5`}
             style={{ backgroundColor: card, borderColor: border }}
           >
             <Coins color={accent} size={18} />
             <Text className="text-sm font-bold" style={{ color: text }}>
-              {totalCoins} عملة
+              {totalCoins.toLocaleString('en-US')} {t('home.coins')}
             </Text>
           </View>
         </View>
@@ -753,7 +763,7 @@ export default function HomeScreen() {
                 style={{ marginBottom: 8 }}
               />
               <Text className="text-sm" style={{ color: subText }}>
-                خطوات اليوم
+                {t('home.todaySteps')}
               </Text>
               <Text
                 className="text-4xl font-black my-0.5"
@@ -763,14 +773,14 @@ export default function HomeScreen() {
               </Text>
               {pedometerStatus ? (
                 <Text className="text-xs font-semibold text-red-500 mt-1">
-                  {pedometerStatus}
+                  {t(pedometerStatus)}
                 </Text>
               ) : (
                 <Text
                   style={{ color: accent }}
                   className="text-xs font-semibold"
                 >
-                  الهدف {goal.toLocaleString('en-US')}
+                  {t('home.goal')} {goal.toLocaleString('en-US')}
                 </Text>
               )}
             </View>
@@ -799,7 +809,7 @@ export default function HomeScreen() {
 
           {/* Metrics Row */}
           <View
-            className="flex-row-reverse w-full justify-around items-center mt-8 pt-4 border-t"
+            className={`${rowDirection} w-full justify-around items-center mt-8 pt-4 border-t`}
             style={{ borderTopColor: border }}
           >
             <View className="items-center">
@@ -811,7 +821,7 @@ export default function HomeScreen() {
                 {distanceKm}
               </Text>
               <Text className="text-xs mt-0.5" style={{ color: subText }}>
-                مسافة (كم)
+                {t('home.distanceKm')}
               </Text>
             </View>
 
@@ -826,7 +836,7 @@ export default function HomeScreen() {
                 {formatTime(secondsElapsed)}
               </Text>
               <Text className="text-xs mt-0.5" style={{ color: subText }}>
-                {isTracking ? 'وقت نشط 🟢' : 'وقت'}
+                {isTracking ? `${t('home.activeTime')} 🟢` : t('home.time')}
               </Text>
             </View>
 
@@ -841,7 +851,7 @@ export default function HomeScreen() {
                 {calories.toLocaleString('en-US')}
               </Text>
               <Text className="text-xs mt-0.5" style={{ color: subText }}>
-                سعرات
+                {t('home.calories')}
               </Text>
             </View>
           </View>

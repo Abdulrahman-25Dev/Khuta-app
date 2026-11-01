@@ -1,5 +1,5 @@
 import './global.css';
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
@@ -12,6 +12,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
 
+import '../i18n/i18next';
 import { useAppStore, getTodayKey } from '../../store/useAppStore';
 import {
   ThemeProvider as AppThemeProvider,
@@ -25,11 +26,13 @@ import {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AppThemeProvider>
-        <RootNavigator />
-      </AppThemeProvider>
-    </SafeAreaProvider>
+    <Suspense fallback={null}>
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <RootNavigator />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    </Suspense>
   );
 }
 

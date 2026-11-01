@@ -1,0 +1,203 @@
+{
+  "app": {
+    "name": "Khuta"
+  },
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete"
+  },
+  "tabs": {
+    "home": "Home",
+    "history": "History",
+    "profile": "Profile"
+  },
+  "home": {
+    "todaySteps": "Today's steps",
+    "goal": "Goal",
+    "distanceKm": "Distance (km)",
+    "calories": "Calories",
+    "time": "Time",
+    "activeTime": "Active time",
+    "weightKg": "kg",
+    "heightCm": "cm",
+    "stepsUnit": "steps",
+    "stepsPerDay": "steps/day",
+    "coins": "Coins",
+    "start": "Start",
+    "pause": "Pause",
+    "notAvailable": "Not available on this device",
+    "permissionRequired": "Please enable motion permission in Settings",
+    "sensorError": "Step sensor error",
+    "sensorErrorTitle": "Sensor error"
+  },
+  "splash": {
+    "tagline": "Your movement. Your wealth."
+  },
+  "tasks": {
+    "title": "Daily tasks",
+    "today": "Today",
+    "withinTwoDays": "Within two days",
+    "withinDays": "Within {{count}} days",
+    "expiresToday": "Expires today",
+    "expiresAfter": "Expires in {{count}} days",
+    "completed": "Complete!",
+    "coinReward": "+{{count}} coins",
+    "types": {
+      "steps": {
+        "title_0": "Step challenge",
+        "title_1": "Today's steps",
+        "unit": "steps"
+      },
+      "distance": {
+        "title_0": "Distance challenge",
+        "title_1": "Walking distance",
+        "unit": "km"
+      },
+      "calories": {
+        "title_0": "Calorie challenge",
+        "title_1": "Calorie burner",
+        "unit": "cal"
+      },
+      "duration": {
+        "title_0": "Active time",
+        "title_1": "Session activity",
+        "unit": "min"
+      }
+    }
+  },
+  "history": {
+    "today": "Today",
+    "average": "Average",
+    "total": "Total",
+    "steps": "steps",
+    "stepsPerDay": "steps/day",
+    "week": "This week",
+    "weeklySteps": "Weekly steps",
+    "currentStreak": "Current streak",
+    "days": "days",
+    "day": "day",
+    "streakMessage": "You have reached your goal for {{currentStreak}} consecutive days. Your longest streak was {{longestStreak}} days.",
+    "weekdays": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
+  },
+  "profile": {
+    "level": "Level",
+    "darkMode": "Dark mode",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "theme": "Theme",
+    "store": "Store",
+    "personalData": "Personal information",
+    "name": "Username",
+    "weight": "Weight",
+    "height": "Height",
+    "dailyGoal": "Daily goal",
+    "settings": "Settings",
+    "notifications": "Daily goal notifications",
+    "language": "Language",
+    "storeAndEarn": "Store and rewards",
+    "totalSteps": "Total steps",
+    "bestStreak": "Longest streak",
+    "calories": "Calories",
+    "day": "day",
+    "days": "days",
+    "requiredPermission": "Permission required",
+    "photoPermissionMessage": "Allow photo access to change your profile picture",
+    "edit": {
+      "nameTitle": "Edit username",
+      "namePlaceholder": "Enter name",
+      "weightTitle": "Edit weight",
+      "weightPlaceholder": "Example: 70",
+      "heightTitle": "Edit height",
+      "heightPlaceholder": "Example: 170",
+      "dailyGoalTitle": "Edit daily goal",
+      "dailyGoalPlaceholder": "Example: 6000",
+      "saveChanges": "Save changes"
+    },
+    "languageRestartTitle": "Restart the app",
+    "languageRestartMessage": "Language changed. Restart the app to fully apply the new layout direction.",
+    "arabic": "العربية",
+    "english": "English",
+    "colors": {
+      "sunset": "Sunset",
+      "forest": "Forest",
+      "ocean": "Ocean",
+      "violet": "Violet Dusk",
+      "maroon": "Maroon"
+    }
+  },
+  "store": {
+    "title": "Khuta Store",
+    "coins": "coins",
+    "tabs": {
+      "themes": "App themes",
+      "rings": "Ring styles",
+      "themesHint": "Color gradients applied across the app",
+      "ringsHint": "Progress ring effects on the steps screen"
+    },
+    "apply": "Apply",
+    "buy": "Buy",
+    "active": "Active",
+    "owned": "Owned",
+    "buyPrice": "Buy {{price}}",
+    "insufficient": "Not enough coins",
+    "insufficientMsg": "Complete your daily tasks and reach your goal to earn more coins.",
+    "purchased": "Purchase complete",
+    "purchasedThemeMsg": "Theme added to your collection. Activate it with the Apply button.",
+    "purchasedBannerMsg": "Banner added to your collection. Activate it with the Apply button.",
+    "purchasedRingMsg": "Ring style added to your collection. Activate it with the Apply button.",
+    "purchasedMsg": "Added to your collection. Activate it with the Apply button.",
+    "themes": {
+      "default": "Default / Dark Night",
+      "crystalBlue": "Crystal Blue",
+      "turquoiseNight": "Glowing Turquoise",
+      "mintWave": "Nitrogen Green",
+      "warmSunset": "Neon Pink",
+      "sunsetCoral": "Solar Coral",
+      "forestEmerald": "Sporty Lime",
+      "royalViolet": "Radiant Coral",
+      "auroraPurple": "Purple Aurora",
+      "royalDeepViolet": "Royal Violet",
+      "luxeBlack": "Luxury Gold"
+    },
+    "rings": {
+      "ticksDefault": "Classic Ticks",
+      "solidSoft": "Soft Line",
+      "dotsClassic": "Classic Dots",
+      "dashRing": "Dashed Line",
+      "waveAudio": "Sound Waves",
+      "pulseRing": "Progress Pulse",
+      "doubleRing": "Double Ring",
+      "arcRing": "Interwoven Path",
+      "boostRing": "Diamond Circle"
+    },
+    "banners": {
+      "default": "Original",
+      "ocean": "Ocean",
+      "sunset": "Sunset",
+      "forest": "Forest",
+      "flame": "Flame",
+      "midnight": "Midnight",
+      "royal": "Royal",
+      "cosmic": "Cosmic"
+    }
+  },
+  "levels": {
+    "1": "First Steps",
+    "2": "Beginner Walker",
+    "3": "Distance Traveler",
+    "4": "Khuta Runner",
+    "5": "Golden Steps",
+    "6": "Pace Setter",
+    "7": "Walking Legend"
+  }
+}

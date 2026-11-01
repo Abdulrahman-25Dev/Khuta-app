@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { i18n } from '../i18n/i18next';
 import type { AppModalButton } from '../components/CustomModal';
 
 interface ModalState {
@@ -19,15 +20,15 @@ export const useModalStore = create<ModalState>((set) => ({
   visible: false,
   title: '',
   message: undefined,
-  buttons: [{ text: 'حسناً' }],
-  show: ({ title, message, buttons = [{ text: 'حسناً' }] }) =>
+  buttons: [{ text: i18n.t('common.ok') }],
+  show: ({ title, message, buttons = [{ text: i18n.t('common.ok') }] }) =>
     set({ visible: true, title, message, buttons }),
   hide: () =>
     set({
       visible: false,
       title: '',
       message: undefined,
-      buttons: [{ text: 'حسناً' }],
+      buttons: [{ text: i18n.t('common.ok') }],
     }),
 }));
 

@@ -9,7 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import BottomSheet from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, Href } from 'expo-router';
 import {
@@ -33,8 +37,10 @@ import {
   Trophy,
   Store,
   Coins,
+  Languages,
   LucideIcon,
 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import {
   useAppStore,
@@ -42,10 +48,11 @@ import {
   AccentColor,
 } from '../../../store/useAppStore';
 import { EditProfileModal, FieldType } from '../../components/EditProfileModal';
-import { profileBanners } from '../../data/storeCatalog';
+import { appThemes, profileBanners } from '../../data/storeCatalog';
 import { useTheme } from '../../context/ThemeContext';
 import { showCustomModal } from '../../store/useModalStore';
 import { getUserLevel } from '../../utils/levelUtils';
+import { changeLanguage, type AppLanguage } from '../../i18n/i18next';
 
 const levelIcons: Record<number, LucideIcon> = {
   1: Sprout,
@@ -58,7 +65,12 @@ const levelIcons: Record<number, LucideIcon> = {
 };
 
 const Profile = () => {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
+  const rowDirection = i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
+  const isArabic = i18n.resolvedLanguage === 'ar';
+  const languageSheetRef = useRef<BottomSheet>(null);
   // جلب البيانات والحالات مباشرة من المتجر
   const {
     user,
@@ -124,6 +136,10 @@ const Profile = () => {
 
   const currentLevel = getUserLevel(totalSteps);
   const LevelIcon = levelIcons[currentLevel.level];
+  const storeTheme = appThemes.find((item) => item.id === theme.id);
+  const themeName = theme.kind === 'store' && storeTheme
+    ? t(storeTheme.nameKey)
+    : t(`profile.colors.${theme.id}`);
 
   // مرجع الـ Bottom Sheet والحقل النشط
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -136,8 +152,8 @@ const Profile = () => {
 
     if (!permissionResult.granted) {
       showCustomModal({
-        title: 'الصلاحية مطلوبة',
-        message: 'يلزم السماح بالوصول للصور لتغيير صورة البروفايل',
+        title: t('profile.requiredPermission'),
+        message: t('profile.photoPermissionMessage'),
       });
       return;
     }
@@ -158,6 +174,11 @@ const Profile = () => {
   const openEditModal = (field: FieldType) => {
     setActiveField(field);
     bottomSheetRef.current?.expand();
+  };
+
+  const handleLanguageChange = async (language: AppLanguage) => {
+    await changeLanguage(language);
+    languageSheetRef.current?.close();
   };
 
   return (
@@ -208,13 +229,13 @@ const Profile = () => {
             >
               {user.name}
             </Text>
-            <View className="flex-row-reverse items-center gap-1 mt-1 justify-center">
+            <View className={`${rowDirection} items-center gap-1 mt-1 justify-center`}>
               <LevelIcon color={accent} size={18} />
               <Text
                 className="text-xs font-semibold"
                 style={{ color: subText }}
               >
-                المستوى {currentLevel.level} • {currentLevel.title}
+                {t('profile.level')} {currentLevel.level} • {t(currentLevel.titleKey)}
               </Text>
             </View>
           </View>
@@ -222,10 +243,10 @@ const Profile = () => {
 
         {/* 2. مفتاح الوضع الفاتح / الداكن */}
         <View
-          className="flex-row-reverse items-center justify-between p-4 rounded-3xl border mb-4"
+          className={`${rowDirection} items-center justify-between p-4 rounded-3xl border mb-4`}
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <View className="flex-row-reverse items-center gap-3">
+          <View className={`${rowDirection} items-center gap-3`}>
             <View
               className="w-9 h-9 rounded-full justify-center items-center"
               style={{ backgroundColor: bg }}
@@ -238,13 +259,13 @@ const Profile = () => {
             </View>
             <View>
               <Text
-                className="text-sm font-bold text-right"
+                className={`text-sm font-bold ${textAlignment}`}
                 style={{ color: text }}
               >
-                الوضع الداكن
+                {t('profile.darkMode')}
               </Text>
-              <Text className="text-xs text-right" style={{ color: subText }}>
-                {isDark ? 'مُفعّل' : 'مُعطّل'}
+              <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                {isDark ? t('profile.enabled') : t('profile.disabled')}
               </Text>
             </View>
           </View>
@@ -261,18 +282,18 @@ const Profile = () => {
           className="p-4 rounded-3xl border mb-6"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <View className="flex-row-reverse items-center gap-2 mb-3">
+          <View className={`${rowDirection} items-center gap-2 mb-3`}>
             <Palette color={accent} size={18} />
             {/* اسم المظهر يعكس المصدر النشط فعلياً (مظهر المتجر أو اللون الافتراضي) */}
             <Text
-              className="text-sm font-bold text-right"
+              className={`text-sm font-bold ${textAlignment}`}
               style={{ color: text }}
             >
-              {theme.name}
+              {themeName}
             </Text>
           </View>
 
-          <View className="flex-row justify-around items-center pt-1">
+          <View className={`${rowDirection} justify-around items-center pt-1`}>
             {(Object.keys(colorPalettes) as AccentColor[]).map((key) => {
               const palette = colorPalettes[key];
               // علامة الاختيار تظهر فقط عندما يكون اللون الافتراضي هو المصدر النشط فعلاً
@@ -301,49 +322,86 @@ const Profile = () => {
 
         {/* 4. كارت الإحصائيات الشاملة */}
         <View
-          className="flex-row-reverse p-4 rounded-3xl border justify-between mb-6"
+          className="rounded-3xl border overflow-hidden mb-6"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <View className="items-center flex-1">
-            <Text style={{ color: accent }} className="text-base font-bold">
-              {formatCompact(totalSteps)}
-            </Text>
-            <Text className="text-[10px] mt-1" style={{ color: subText }}>
-              إجمالي الخطوات
-            </Text>
-          </View>
-          <View
-            className="w-[1px] h-full"
-            style={{ backgroundColor: border }}
-          />
-          <View className="items-center flex-1">
-            <Text style={{ color: accent }} className="text-base font-bold">
-              {formatNumber(bestStreak)} {bestStreak === 1 ? 'يوم' : 'أيام'}
-            </Text>
-            <Text className="text-[10px] mt-1" style={{ color: subText }}>
-              أعلى ستريك
-            </Text>
-          </View>
-          <View
-            className="w-[1px] h-full"
-            style={{ backgroundColor: border }}
-          />
-          <View className="items-center flex-1">
-            <Text style={{ color: accent }} className="text-base font-bold">
-              {formatCompact(totalCalories)}
-            </Text>
-            <Text className="text-[10px] mt-1" style={{ color: subText }}>
-              سعرة حرارية
-            </Text>
+          <TouchableOpacity
+            onPress={() => languageSheetRef.current?.expand()}
+            activeOpacity={0.8}
+            className={`${rowDirection} items-center justify-between p-4 border-b`}
+            style={{ borderBottomColor: border }}
+          >
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <Languages color={accent} size={18} />
+              </View>
+              <View>
+                <Text
+                  className={`text-sm font-bold ${textAlignment}`}
+                  style={{ color: text }}
+                >
+                  {t('profile.language')}
+                </Text>
+                <Text
+                  className={`text-xs ${textAlignment}`}
+                  style={{ color: subText }}
+                >
+                  {isArabic ? t('profile.arabic') : t('profile.english')}
+                </Text>
+              </View>
+            </View>
+            <ChevronLeft
+              color="#94A3B8"
+              size={18}
+              style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }}
+            />
+          </TouchableOpacity>
+          <View className={`${rowDirection} p-4 justify-between`}>
+            <View className="items-center flex-1">
+              <Text style={{ color: accent }} className="text-base font-bold">
+                {formatCompact(totalSteps)}
+              </Text>
+              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+                {t('profile.totalSteps')}
+              </Text>
+            </View>
+            <View
+              className="w-[1px] h-full"
+              style={{ backgroundColor: border }}
+            />
+            <View className="items-center flex-1">
+              <Text style={{ color: accent }} className="text-base font-bold">
+                {formatNumber(bestStreak)}{' '}
+                {bestStreak === 1 ? t('profile.day') : t('profile.days')}
+              </Text>
+              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+                {t('profile.bestStreak')}
+              </Text>
+            </View>
+            <View
+              className="w-[1px] h-full"
+              style={{ backgroundColor: border }}
+            />
+            <View className="items-center flex-1">
+              <Text style={{ color: accent }} className="text-base font-bold">
+                {formatCompact(totalCalories)}
+              </Text>
+              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+                {t('profile.calories')}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* 5. المتجر والربح */}
         <Text
-          className="text-xs font-bold text-right mb-2 pr-1"
+          className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
-          المتجر والربح
+          {t('profile.storeAndEarn')}
         </Text>
         <View
           className="rounded-3xl border overflow-hidden mb-6"
@@ -352,9 +410,9 @@ const Profile = () => {
           <TouchableOpacity
             onPress={() => router.push('/store' as Href)}
             activeOpacity={0.8}
-            className="flex-row-reverse justify-between items-center p-4"
+            className={`${rowDirection} justify-between items-center p-4`}
           >
-            <View className="flex-row-reverse items-center gap-3">
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -363,29 +421,29 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  متجر خُطى
+                  {t('app.name')}
                 </Text>
-                <View className="flex-row-reverse items-center gap-1 mt-1">
+                <View className={`${rowDirection} items-center gap-1 mt-1`}>
                   <Coins color={accent} size={12} />
                   <Text style={{ color: accent }} className="text-xs font-bold">
-                    {formatNumber(totalCoins)} عملة
+                    {formatNumber(totalCoins)} {t('home.coins')}
                   </Text>
                 </View>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
         </View>
 
         {/* 6. قسم البيانات الشخصية والبدنية */}
         <Text
-          className="text-xs font-bold text-right mb-2 pr-1"
+          className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
-          البيانات الشخصية
+          {t('profile.personalData')}
         </Text>
         <View
           className="rounded-3xl border overflow-hidden mb-6"
@@ -394,10 +452,10 @@ const Profile = () => {
           {/* تعديل الاسم */}
           <TouchableOpacity
             onPress={() => openEditModal('name')}
-            className="flex-row-reverse justify-between items-center p-4 border-b"
+            className={`${rowDirection} justify-between items-center p-4 border-b`}
             style={{ borderBottomColor: border }}
           >
-            <View className="flex-row-reverse items-center gap-3">
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -406,26 +464,26 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  اسم المستخدم
+                  {t('profile.name')}
                 </Text>
-                <Text className="text-xs text-right" style={{ color: subText }}>
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {user.name}
                 </Text>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
 
           {/* تعديل الوزن */}
           <TouchableOpacity
             onPress={() => openEditModal('weight')}
-            className="flex-row-reverse justify-between items-center p-4 border-b"
+            className={`${rowDirection} justify-between items-center p-4 border-b`}
             style={{ borderBottomColor: border }}
           >
-            <View className="flex-row-reverse items-center gap-3">
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -434,26 +492,26 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  الوزن
+                  {t('profile.weight')}
                 </Text>
-                <Text className="text-xs text-right" style={{ color: subText }}>
-                  {user.weight} كجم
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {user.weight} {t('home.weightKg')}
                 </Text>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
 
           {/* تعديل الطول */}
           <TouchableOpacity
             onPress={() => openEditModal('height')}
-            className="flex-row-reverse justify-between items-center p-4 border-b"
+            className={`${rowDirection} justify-between items-center p-4 border-b`}
             style={{ borderBottomColor: border }}
           >
-            <View className="flex-row-reverse items-center gap-3">
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -462,25 +520,25 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  الطول
+                  {t('profile.height')}
                 </Text>
-                <Text className="text-xs text-right" style={{ color: subText }}>
-                  {user.height} سم
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {user.height} {t('home.heightCm')}
                 </Text>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
 
           {/* تعديل الهدف اليومي */}
           <TouchableOpacity
             onPress={() => openEditModal('dailyGoal')}
-            className="flex-row-reverse justify-between items-center p-4"
+            className={`${rowDirection} justify-between items-center p-4`}
           >
-            <View className="flex-row-reverse items-center gap-3">
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -489,33 +547,33 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  الهدف اليومي
+                  {t('profile.dailyGoal')}
                 </Text>
-                <Text className="text-xs text-right" style={{ color: subText }}>
-                  {user.dailyGoal?.toLocaleString()} خطوة/يوم
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {user.dailyGoal?.toLocaleString('en-US')} {t('home.stepsPerDay')}
                 </Text>
               </View>
             </View>
-            <ChevronLeft color="#94A3B8" size={18} />
+            <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
           </TouchableOpacity>
         </View>
 
         {/* 7. قسم التنبيهات والإعدادات */}
         <Text
-          className="text-xs font-bold text-right mb-2 pr-1"
+          className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
-          الإعدادات
+          {t('profile.settings')}
         </Text>
         <View
           className="rounded-3xl border overflow-hidden mb-10"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <View className="flex-row-reverse items-center justify-between p-4">
-            <View className="flex-row-reverse items-center gap-3">
+          <View className={`${rowDirection} items-center justify-between p-4 border-b`} style={{ borderBottomColor: border }}>
+            <View className={`${rowDirection} items-center gap-3`}>
               <View
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
@@ -524,13 +582,13 @@ const Profile = () => {
               </View>
               <View>
                 <Text
-                  className="text-sm font-bold text-right"
+                  className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  تنبيهات الهدف اليومي
+                  {t('profile.notifications')}
                 </Text>
-                <Text className="text-xs text-right" style={{ color: subText }}>
-                  {notificationsEnabled ? 'مُفعّلة' : 'مُعطّلة'}
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {notificationsEnabled ? t('profile.enabled') : t('profile.disabled')}
                 </Text>
               </View>
             </View>
@@ -550,6 +608,49 @@ const Profile = () => {
         activeField={activeField}
         onClose={() => setActiveField(null)}
       />
+      <BottomSheet
+        ref={languageSheetRef}
+        index={-1}
+        snapPoints={['35%']}
+        enablePanDownToClose
+        backdropComponent={(props: BottomSheetBackdropProps) => (
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={-1}
+            appearsOnIndex={0}
+            pressBehavior="close"
+            opacity={0.5}
+          />
+        )}
+        backgroundStyle={{ backgroundColor: card }}
+        handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
+      >
+        <BottomSheetView className="p-5">
+          <Text className="text-xl font-bold text-center" style={{ color: text }}>
+            {t('profile.language')}
+          </Text>
+          {(['ar', 'en'] as const).map((language) => (
+            <TouchableOpacity
+              key={language}
+              onPress={() => void handleLanguageChange(language)}
+              activeOpacity={0.8}
+              className="mt-3 rounded-2xl p-4 border"
+              style={{
+                backgroundColor:
+                  language === (isArabic ? 'ar' : 'en') ? `${accent}20` : bg,
+                borderColor:
+                  language === (isArabic ? 'ar' : 'en') ? accent : border,
+              }}
+            >
+              <Text className="text-center font-bold" style={{ color: text }}>
+                {language === 'ar'
+                  ? t('profile.arabic')
+                  : t('profile.english')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </BottomSheetView>
+      </BottomSheet>
     </SafeAreaView>
   );
 };

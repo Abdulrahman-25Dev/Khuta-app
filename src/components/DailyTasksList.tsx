@@ -1,5 +1,6 @@
 import React, { memo, useEffect } from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   Footprints,
   MapPin,
@@ -14,7 +15,11 @@ import {
 
 import { getTodayKey, useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../context/ThemeContext';
-import { Task, TaskType, getTaskTimeframe } from '../utils/taskGenerator';
+import {
+  Task,
+  TaskType,
+  getTaskTimeframeKey,
+} from '../utils/taskGenerator';
 
 const taskIcons: Record<TaskType, LucideIcon> = {
   steps: Footprints,
@@ -60,6 +65,10 @@ export default memo(function DailyTasksList({
   currentCalories = 0,
   currentMinutes = 0,
 }: DailyTasksListProps) {
+  const { t, i18n } = useTranslation();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const { dailyTasks, completeTask, updateTaskProgress } = useAppStore();
   // ألوان الأسطح والنصوص من السياق الذرّي مباشرةً (لا useState/useEffect مؤجلة)
   const { accent, card, border, text, subText } = useTheme();
@@ -98,10 +107,10 @@ export default memo(function DailyTasksList({
 
   return (
     <View>
-      <View className="flex-row-reverse items-center gap-2 px-1 mb-3">
+      <View className={`${rowDirection} items-center gap-2 px-1 mb-3`}>
         <ListChecks color={accent} size={22} />
         <Text className="text-lg font-bold" style={{ color: text }}>
-          المهام اليومية
+          {t('tasks.title')}
         </Text>
       </View>
 
@@ -125,7 +134,9 @@ export default memo(function DailyTasksList({
               className={`py-3 ${isLast ? '' : 'border-b'}`}
               style={isLast ? undefined : { borderBottomColor: border }}
             >
-              <View className="flex-row-reverse items-center justify-between gap-3">
+              <View
+                className={`${rowDirection} items-center justify-between gap-3`}
+              >
                 <View
                   style={{ backgroundColor: `${accent}20` }}
                   className="w-10 h-10 rounded-full items-center justify-center"
@@ -135,17 +146,19 @@ export default memo(function DailyTasksList({
 
                 <View className="flex-1">
                   <Text
-                    className="text-sm font-bold text-right"
+                    className={`text-sm font-bold ${textAlignment}`}
                     style={{ color: text }}
                   >
-                    {task.title}
+                    {t(task.titleKey)}
                   </Text>
-                  <View className="flex-row-reverse items-center justify-end gap-1.5 mt-1">
+                  <View
+                    className={`${rowDirection} items-center justify-end gap-1.5 mt-1`}
+                  >
                     <Text
-                      className="text-xs text-right"
+                      className={`text-xs ${textAlignment}`}
                       style={{ color: subText }}
                     >
-                      {task.target.toLocaleString('en-US')} {task.unit}
+                      {task.target.toLocaleString('en-US')} {t(task.unitKey)}
                     </Text>
                     <View
                       style={{
@@ -158,18 +171,20 @@ export default memo(function DailyTasksList({
                         style={{ color: accent }}
                         className="text-[10px] font-bold"
                       >
-                        {getTaskTimeframe(task.days)}
+                        {t(getTaskTimeframeKey(task.days), {
+                          count: Math.max(1, Math.floor(task.days || 1)),
+                        })}
                       </Text>
                     </View>
                   </View>
                   {task.days > 1 && (
                     <Text
-                      className="text-[10px] text-right mt-1"
+                      className={`text-[10px] ${textAlignment} mt-1`}
                       style={{ color: subText }}
                     >
                       {remainingDays === 1
-                        ? 'ينتهي اليوم'
-                        : `ينتهي بعد ${remainingDays} أيام`}
+                        ? t('tasks.expiresToday')
+                        : t('tasks.expiresAfter', { count: remainingDays })}
                     </Text>
                   )}
                 </View>
@@ -208,18 +223,20 @@ export default memo(function DailyTasksList({
               </View>
 
               {/* المكافأة ونسبة التقدم */}
-              <View className="flex-row-reverse items-center justify-between mt-2.5">
-                <View className="flex-row-reverse items-center gap-1">
+              <View
+                className={`${rowDirection} items-center justify-between mt-2.5`}
+              >
+                <View className={`${rowDirection} items-center gap-1`}>
                   <Coins color={accent} size={13} />
                   <Text style={{ color: accent }} className="text-xs font-bold">
-                    +{task.coins} عملة
+                    {t('tasks.coinReward', { count: task.coins })}
                   </Text>
                 </View>
                 <Text
                   className="text-[11px] font-bold"
                   style={{ color: subText }}
                 >
-                  {done ? 'اكتمل!' : `${progress}%`}
+                  {done ? t('tasks.completed') : `${progress}%`}
                 </Text>
               </View>
             </View>

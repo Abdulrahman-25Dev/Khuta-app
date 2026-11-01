@@ -1,0 +1,203 @@
+{
+  "app": {
+    "name": "خُطى"
+  },
+  "common": {
+    "ok": "حسناً",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "history": "السجل",
+    "profile": "الملف الشخصي"
+  },
+  "home": {
+    "todaySteps": "خطوات اليوم",
+    "goal": "الهدف",
+    "distanceKm": "مسافة (كم)",
+    "calories": "سعرات",
+    "time": "وقت",
+    "activeTime": "وقت نشط",
+    "weightKg": "كجم",
+    "heightCm": "سم",
+    "stepsUnit": "خطوة",
+    "stepsPerDay": "خطوة/يوم",
+    "coins": "عملة",
+    "start": "ابدأ",
+    "pause": "إيقاف مؤقت",
+    "notAvailable": "غير متاح على هذا الجهاز",
+    "permissionRequired": "يرجى تفعيل إذن الحركة في الإعدادات",
+    "sensorError": "خطأ في مستشعر الخطوات",
+    "sensorErrorTitle": "خطأ في المستشعر"
+  },
+  "splash": {
+    "tagline": "حُركتك.. ثروتك"
+  },
+  "tasks": {
+    "title": "المهام اليومية",
+    "today": "اليوم",
+    "withinTwoDays": "خلال يومين",
+    "withinDays": "خلال {{count}} أيام",
+    "expiresToday": "ينتهي اليوم",
+    "expiresAfter": "ينتهي بعد {{count}} أيام",
+    "completed": "اكتمل!",
+    "coinReward": "+{{count}} عملة",
+    "types": {
+      "steps": {
+        "title_0": "تحدي الخطوات",
+        "title_1": "خطوات اليوم",
+        "unit": "خطوة"
+      },
+      "distance": {
+        "title_0": "تحدي المسافة",
+        "title_1": "مسافة المشي",
+        "unit": "كم"
+      },
+      "calories": {
+        "title_0": "تحدي السعرات",
+        "title_1": "حارق السعرات",
+        "unit": "سعرة"
+      },
+      "duration": {
+        "title_0": "وقت النشاط",
+        "title_1": "حركية الجلسة",
+        "unit": "دقيقة"
+      }
+    }
+  },
+  "history": {
+    "today": "اليوم",
+    "average": "المتوسط",
+    "total": "المجموع",
+    "steps": "خطوة",
+    "stepsPerDay": "خطوة/يوم",
+    "week": "الأسبوع",
+    "weeklySteps": "الخطوات الأسبوعية",
+    "currentStreak": "السلسلة الحالية",
+    "days": "أيام",
+    "day": "يوم",
+    "streakMessage": "لقد حققت هدفك لمدة {{currentStreak}} أيام متتالية. أطول سلسلة قمت بها كانت لمدة {{longestStreak}} أيام.",
+    "weekdays": {
+      "sun": "أح",
+      "mon": "إث",
+      "tue": "ثلا",
+      "wed": "أرب",
+      "thu": "خم",
+      "fri": "جم",
+      "sat": "سب"
+    }
+  },
+  "profile": {
+    "level": "المستوى",
+    "darkMode": "الوضع الداكن",
+    "enabled": "مُفعّل",
+    "disabled": "مُعطّل",
+    "theme": "المظهر",
+    "store": "المتجر",
+    "personalData": "البيانات الشخصية",
+    "name": "اسم المستخدم",
+    "weight": "الوزن",
+    "height": "الطول",
+    "dailyGoal": "الهدف اليومي",
+    "settings": "الإعدادات",
+    "notifications": "تنبيهات الهدف اليومي",
+    "language": "اللغة",
+    "storeAndEarn": "المتجر والربح",
+    "totalSteps": "إجمالي الخطوات",
+    "bestStreak": "أعلى ستريك",
+    "calories": "سعرة حرارية",
+    "day": "يوم",
+    "days": "أيام",
+    "requiredPermission": "الصلاحية مطلوبة",
+    "photoPermissionMessage": "يلزم السماح بالوصول للصور لتغيير صورة البروفايل",
+    "edit": {
+      "nameTitle": "تعديل اسم المستخدم",
+      "namePlaceholder": "أدخل الاسم",
+      "weightTitle": "تعديل الوزن",
+      "weightPlaceholder": "مثال: 70",
+      "heightTitle": "تعديل الطول",
+      "heightPlaceholder": "مثال: 170",
+      "dailyGoalTitle": "تعديل الهدف اليومي",
+      "dailyGoalPlaceholder": "مثال: 6000",
+      "saveChanges": "حفظ التعديلات"
+    },
+    "languageRestartTitle": "إعادة تشغيل التطبيق",
+    "languageRestartMessage": "تم تغيير اللغة. أعد تشغيل التطبيق لتطبيق اتجاه العرض الجديد بالكامل.",
+    "arabic": "العربية",
+    "english": "English",
+    "colors": {
+      "sunset": "الغروب (Sunset)",
+      "forest": "الغابة (Forest)",
+      "ocean": "المحيط (Ocean)",
+      "violet": "البنفسجي (Violet Dusk)",
+      "maroon": "العنابي (Maroon)"
+    }
+  },
+  "store": {
+    "title": "متجر المظهر",
+    "coins": "عملة",
+    "tabs": {
+      "themes": "ألوان التطبيق",
+      "rings": "أنماط العداد",
+      "themesHint": "تدرجات تُطبَّق على التطبيق بالكامل",
+      "ringsHint": "تأثير حلقة التقدم في شاشة الخطوات اليوميّة"
+    },
+    "apply": "تطبيق",
+    "buy": "شراء",
+    "active": "نشط",
+    "owned": "محدد",
+    "buyPrice": "شراء {{price}}",
+    "insufficient": "رصيد غير كافٍ",
+    "insufficientMsg": "أكمل مهامك اليومية وبلوغ الهدف لجمع المزيد من العملات.",
+    "purchased": "تم الشراء",
+    "purchasedThemeMsg": "أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».",
+    "purchasedBannerMsg": "أُضيفت الخلفية إلى مكتبتك، فعّلها من زر «تطبيق».",
+    "purchasedRingMsg": "أُضيف نمط العداد إلى مكتبتك، فعّله من زر «تطبيق».",
+    "purchasedMsg": "أُضيف العنصر إلى مكتبتك، فعّله من زر «تطبيق».",
+    "themes": {
+      "default": "الافتراضي / الليل الداكن",
+      "crystalBlue": "الأزرق الكريستالي",
+      "turquoiseNight": "التركواز المتوهج",
+      "mintWave": "النيتروجين الأخضر",
+      "warmSunset": "الوردي النيون",
+      "sunsetCoral": "المرجان الشمسي",
+      "forestEmerald": "الليموني الرياضي",
+      "royalViolet": "المرجاني المشع",
+      "auroraPurple": "الأورورا البنفسجية",
+      "royalDeepViolet": "البنفسجي الملكي",
+      "luxeBlack": "الذهبي الفاخر"
+    },
+    "rings": {
+      "ticksDefault": "الشرطات التقليدية",
+      "solidSoft": "الخط الناعم",
+      "dotsClassic": "المنقط العادي",
+      "dashRing": "الخط المتقطع",
+      "waveAudio": "موجات الصوت",
+      "pulseRing": "نبض التقدم",
+      "doubleRing": "الحلقة المزدوجة",
+      "arcRing": "المسار المتداخل",
+      "boostRing": "الدائرة الالماسية"
+    },
+    "banners": {
+      "default": "الأصلية",
+      "ocean": "المحيط",
+      "sunset": "الغروب",
+      "forest": "الغابة",
+      "flame": "اللهب",
+      "midnight": "منتصف الليل",
+      "royal": "الملوكية",
+      "cosmic": "الفضاء"
+    }
+  },
+  "levels": {
+    "1": "خُطوة بداية",
+    "2": "ماشي مبتدئ",
+    "3": "عابر المسافات",
+    "4": "عدّاء خُطى",
+    "5": "خطى ذهبية",
+    "6": "محرك الأجواء",
+    "7": "أسطورة المشي"
+  }
+}

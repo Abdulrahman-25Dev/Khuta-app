@@ -3,10 +3,11 @@ import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
 import { Footprints } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useAppStore, DailyLog } from '../../../store/useAppStore';
 import { useTheme } from '../../context/ThemeContext';
 
-const DAYS_AR = ['أح', 'إث', 'ثلا', 'أرب', 'خم', 'جم', 'سب'];
+const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 const toDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -57,7 +58,12 @@ const getLongestStreak = (history: DailyLog[]) => {
 };
 
 const History = () => {
+  const { t, i18n } = useTranslation();
   const { history } = useAppStore();
+  const rowDirection =
+    i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
+  const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
+  const contentAlignment = i18n.dir() === 'rtl' ? 'items-end' : 'items-start';
   // الألوان من السياق الذرّي: لون التمييز + أسطح الكروت والنصوص في نفس الإطار
   const { accent, bg, card, border, text, subText } = useTheme();
 
@@ -77,7 +83,10 @@ const History = () => {
   const weekDays = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(saturday);
     d.setDate(saturday.getDate() + i);
-    return { key: toDateKey(d), label: DAYS_AR[d.getDay()] };
+    return {
+      key: toDateKey(d),
+      label: t(`history.weekdays.${DAY_KEYS[d.getDay()]}`),
+    };
   });
 
   const todaySteps = logsByDate.get(todayKey)?.steps ?? 0;
@@ -107,13 +116,13 @@ const History = () => {
   return (
     <SafeAreaView className="flex-1 px-5">
       {/* 1. كروت الإحصائيات العلوية */}
-      <View className="flex-row-reverse justify-between mb-5 gap-2 mt-5 ">
+      <View className={`${rowDirection} justify-between mb-5 gap-2 mt-5`}>
         <View
           className="flex-1 p-3 rounded-2xl items-center border"
           style={{ backgroundColor: card, borderColor: border }}
         >
           <Text className="text-xs" style={{ color: subText }}>
-            اليوم
+            {t('history.today')}
           </Text>
           <Text
             style={{ color: accent }}
@@ -122,7 +131,7 @@ const History = () => {
             {formatCompact(todaySteps)}
           </Text>
           <Text className="text-[10px]" style={{ color: subText }}>
-            خطوة
+            {t('history.steps')}
           </Text>
         </View>
 
@@ -131,7 +140,7 @@ const History = () => {
           style={{ backgroundColor: card, borderColor: border }}
         >
           <Text className="text-xs" style={{ color: subText }}>
-            المتوسط
+            {t('history.average')}
           </Text>
           <Text
             style={{ color: accent }}
@@ -140,7 +149,7 @@ const History = () => {
             {formatCompact(weekAverage)}
           </Text>
           <Text className="text-[10px]" style={{ color: subText }}>
-            خطوة/يوم
+            {t('history.stepsPerDay')}
           </Text>
         </View>
 
@@ -149,7 +158,7 @@ const History = () => {
           style={{ backgroundColor: card, borderColor: border }}
         >
           <Text className="text-xs" style={{ color: subText }}>
-            المجموع
+            {t('history.total')}
           </Text>
           <Text
             style={{ color: accent }}
@@ -158,7 +167,7 @@ const History = () => {
             {formatCompact(weekTotal)}
           </Text>
           <Text className="text-[10px]" style={{ color: subText }}>
-            الأسبوع
+            {t('history.week')}
           </Text>
         </View>
       </View>
@@ -168,8 +177,11 @@ const History = () => {
         className="p-4 rounded-3xl border mb-5"
         style={{ backgroundColor: card, borderColor: border }}
       >
-        <Text className="text-base font-bold mb-5 text-right" style={{ color: text }}>
-          الخطوات الأسبوعية
+        <Text
+          className={`text-base font-bold mb-5 ${textAlignment}`}
+          style={{ color: text }}
+        >
+          {t('history.weeklySteps')}
         </Text>
 
         <View className="items-center overflow-hidden">
@@ -202,17 +214,20 @@ const History = () => {
         className="p-5 rounded-3xl border mb-10"
         style={{ backgroundColor: card, borderColor: border }}
       >
-        <View className="flex-row-reverse justify-between items-center my-2">
-          <View className="items-end">
-            <Text className="text-xs font-bold mb-1" style={{ color: subText }}>
-              السلسلة الحالية
+        <View className={`${rowDirection} justify-between items-center my-2`}>
+          <View className={contentAlignment}>
+            <Text
+              className={`text-xs font-bold mb-1 ${textAlignment}`}
+              style={{ color: subText }}
+            >
+              {t('history.currentStreak')}
             </Text>
-            <View className="flex-row-reverse items-baseline gap-1">
+            <View className={`${rowDirection} items-baseline gap-1`}>
               <Text className="text-4xl font-extrabold" style={{ color: text }}>
                 {currentStreak}
               </Text>
               <Text className="text-xl font-bold" style={{ color: text }}>
-                أيام
+                {t('history.days')}
               </Text>
             </View>
           </View>
@@ -226,8 +241,7 @@ const History = () => {
         </View>
 
         <Text className="text-xs text-center leading-5 px-2" style={{ color: subText }}>
-          لقد حققت هدفك لمدة {currentStreak} أيام متتالية. أطول سلسلة قمت بها
-          كانت لمدة {longestStreak} أيام.
+          {t('history.streakMessage', { currentStreak, longestStreak })}
         </Text>
       </View>
     </SafeAreaView>
