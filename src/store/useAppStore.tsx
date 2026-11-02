@@ -17,7 +17,10 @@ import {
   defaultBannerId,
   defaultRingStyleId,
   ringStyles,
+  offers,
   type AppTheme,
+  type Offer,
+  type OfferKind,
   type RingStyle,
 } from '../data/storeCatalog';
 import { create } from 'zustand';
@@ -75,6 +78,13 @@ export interface DailyLog {
   goalReached: boolean;
 }
 
+export interface ActiveEffect {
+  id: string;
+  kind: OfferKind;
+  value: number;
+  expiresAt: number;
+}
+
 interface AppState {
   themeMode: ThemeMode;
   toggleTheme: () => void;
@@ -126,6 +136,8 @@ interface AppState {
   ownedThemes: string[];
   ownedProfileBanners: string[];
   ownedRingStyles: string[];
+  activeEffects: ActiveEffect[];
+  lastFreeClaimDate: string | null;
   // تطبيق مظهر من المتجر وإلغاء تفعيل أي لون افتراضي نشط
   selectStoreTheme: (theme: AppTheme | string) => void;
   // اختيار لون افتراضي: يُطبَّق لونه ويُلغى تفعيل أي مظهر من المتجر
@@ -138,6 +150,10 @@ interface AppState {
   purchaseTheme: (id: string, price: number) => boolean;
   purchaseProfileBanner: (id: string, price: number) => boolean;
   purchaseRingStyle: (id: string, price: number) => boolean;
+  hasActiveEffect: (kind: OfferKind) => boolean;
+  applyEffect: (offer: Offer) => boolean;
+  purchaseOffer: (offerId: string, price: number) => boolean;
+  claimDailyFree: () => boolean;
 }
 
 export const useAppStore = create<AppState>()(
@@ -332,6 +348,90 @@ export const useAppStore = create<AppState>()(
       ownedThemes: [defaultThemeId],
       ownedProfileBanners: [defaultBannerId],
       ownedRingStyles: [defaultRingStyleId],
+      activeEffects: [],
+      lastFreeClaimDate: null,
+      hasActiveEffect: (kind) =>
+        get().activeEffects.some(
+          (effect) => effect.kind === kind && effect.expiresAt > Date.now()
+        ),
+      applyEffect: (offer) => {
+        const catalogOffer = offers.find((item) => item.id === offer.id);
+        if (
+          !catalogOffer ||
+          !['streak-freeze', 'multiplier', 'goal-reduce'].includes(
+            catalogOffer.kind
+          )
+        ) {
+          return false;
+        }
+
+        const state = get();
+        const now = Date.now();
+        if (
+          state.totalCoins < catalogOffer.price ||
+          state.activeEffects.some(
+            (effect) =>
+              effect.kind === catalogOffer.kind && effect.expiresAt > now
+          )
+        ) {
+          return false;
+        }
+
+        const day = 24 * 60 * 60 * 1000;
+        const duration =
+          catalogOffer.kind === 'streak-freeze'
+            ? catalogOffer.value * day
+            : catalogOffer.kind === 'multiplier' &&
+                catalogOffer.id === 'multiplier-7d'
+              ? 7 * day
+              : day;
+        const newCoins = state.totalCoins - catalogOffer.price;
+        setStoredCoins(newCoins);
+        set({
+          totalCoins: newCoins,
+          activeEffects: [
+            ...state.activeEffects.filter((effect) => effect.expiresAt > now),
+            {
+              id: catalogOffer.id,
+              kind: catalogOffer.kind,
+              value: catalogOffer.value,
+              expiresAt: now + duration,
+            },
+          ],
+        });
+        return true;
+      },
+      purchaseOffer: (offerId, price) => {
+        const catalogOffer = offers.find((item) => item.id === offerId);
+        const state = get();
+        if (
+          !catalogOffer ||
+          catalogOffer.kind === 'daily-free' ||
+          catalogOffer.kind === 'streak-freeze' ||
+          catalogOffer.kind === 'multiplier' ||
+          catalogOffer.kind === 'goal-reduce' ||
+          catalogOffer.price !== price ||
+          state.totalCoins < price
+        ) {
+          return false;
+        }
+
+        const newCoins = state.totalCoins - price;
+        setStoredCoins(newCoins);
+        set({ totalCoins: newCoins });
+        return true;
+      },
+      claimDailyFree: () => {
+        const state = get();
+        const today = getTodayKey();
+        const dailyOffer = offers.find((offer) => offer.kind === 'daily-free');
+        if (!dailyOffer || state.lastFreeClaimDate === today) return false;
+
+        const newCoins = state.totalCoins + dailyOffer.value;
+        setStoredCoins(newCoins);
+        set({ totalCoins: newCoins, lastFreeClaimDate: today });
+        return true;
+      },
       // تطبيق مظهر من المتجر: يُثبّت المصدر النشط على مظهر المتجر،
       // فتُلغى تلقائياً أي علامة اختيار على الألوان الافتراضية في شاشة الملف.
       selectStoreTheme: (theme) => {
@@ -420,6 +520,8 @@ export const useAppStore = create<AppState>()(
         ownedThemes: state.ownedThemes,
         ownedProfileBanners: state.ownedProfileBanners,
         ownedRingStyles: state.ownedRingStyles,
+        activeEffects: state.activeEffects,
+        lastFreeClaimDate: state.lastFreeClaimDate,
       }),
       migrate: (persistedState, version) => {
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
@@ -451,6 +553,8 @@ export const useAppStore = create<AppState>()(
           ownedThemes: [defaultThemeId],
           ownedProfileBanners: [defaultBannerId],
           ownedRingStyles: [defaultRingStyleId],
+          activeEffects: [],
+          lastFreeClaimDate: null,
         };
         // التوافق مع النسخ القديمة (التي خزّنت currentThemeId/accentColor منفصلين):
         // ننقل المظهر المطبّق إلى المصدر الموحّد activeTheme تلقائياً

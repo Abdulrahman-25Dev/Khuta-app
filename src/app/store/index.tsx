@@ -807,36 +807,25 @@ const RingStyleCard = memo(function RingStyleCard({
 
 const OfferCard = memo(function OfferCard({
   offer,
-  activeEffect,
   activeKindEffect,
   claimed,
   totalCoins,
-  onBuy,
   onActivate,
   onClaim,
 }: {
   offer: Offer;
-  activeEffect?: ActiveEffect;
   activeKindEffect?: ActiveEffect;
   claimed: boolean;
   totalCoins: number;
-  onBuy: (offer: Offer) => void;
   onActivate: (offer: Offer) => void;
   onClaim: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { card, border, text, subText } = useTheme();
   const [now, setNow] = useState(0);
-  const activeEffectExpiresAt = Math.max(
-    activeEffect?.expiresAt ?? 0,
-    activeKindEffect?.expiresAt ?? 0
-  );
+  const activeEffectExpiresAt = activeKindEffect?.expiresAt ?? 0;
   useEffect(() => {
     const initialTimeout = setTimeout(() => setNow(Date.now()), 0);
-    if (activeEffectExpiresAt === undefined) {
-      return () => clearTimeout(initialTimeout);
-    }
-
     const expiryTimeout = setTimeout(
       () => setNow(Date.now()),
       Math.max(0, activeEffectExpiresAt - Date.now())
@@ -846,12 +835,10 @@ const OfferCard = memo(function OfferCard({
       clearTimeout(expiryTimeout);
     };
   }, [activeEffectExpiresAt]);
-  const iconColor = offer.kind === 'daily-free' ? '#22C55E' : offer.kind === 'coin-box' ? '#EAB308' : offer.kind === 'streak-freeze' ? '#38BDF8' : offer.kind === 'multiplier' ? '#F97316' : '#A78BFA';
+  const iconColor = offer.kind === 'daily-free' ? '#22C55E' : offer.kind === 'streak-freeze' ? '#38BDF8' : offer.kind === 'multiplier' ? '#F97316' : '#A78BFA';
   const icon =
     offer.kind === 'daily-free' ? (
       <Gift color={iconColor} size={22} />
-    ) : offer.kind === 'coin-box' ? (
-      <Coins color={iconColor} size={22} />
     ) : offer.kind === 'streak-freeze' ? (
       <Snowflake color={iconColor} size={22} />
     ) : offer.kind === 'multiplier' ? (
@@ -859,11 +846,10 @@ const OfferCard = memo(function OfferCard({
     ) : (
       <Target color={iconColor} size={22} />
     );
-  const isEffect = offer.kind === 'multiplier' || offer.kind === 'goal-reduce';
-  const effectIsActive =
-    isEffect &&
-    activeEffect !== undefined &&
-    (now === 0 || activeEffect.expiresAt > now);
+  const isEffect =
+    offer.kind === 'streak-freeze' ||
+    offer.kind === 'multiplier' ||
+    offer.kind === 'goal-reduce';
   const kindEffectIsActive =
     isEffect &&
     activeKindEffect !== undefined &&
@@ -877,18 +863,12 @@ const OfferCard = memo(function OfferCard({
       ? claimed
         ? t('offers.claimed')
         : t('offers.claim')
-      : effectIsActive && activeEffect
-        ? t('offers.activeUntil', {
-            date: new Date(activeEffect.expiresAt).toLocaleString(
+      : kindEffectIsActive && activeKindEffect
+        ? t('offers.effectAlreadyActiveUntil', {
+            date: new Date(activeKindEffect.expiresAt).toLocaleString(
               i18n.language
             ),
           })
-        : kindEffectIsActive && activeKindEffect
-          ? t('offers.effectAlreadyActiveUntil', {
-              date: new Date(activeKindEffect.expiresAt).toLocaleString(
-                i18n.language
-              ),
-            })
         : isEffect
           ? t('offers.activate')
           : t('offers.buy');
@@ -897,8 +877,6 @@ const OfferCard = memo(function OfferCard({
       onClaim();
     } else if (isEffect) {
       onActivate(offer);
-    } else {
-      onBuy(offer);
     }
   };
 
@@ -938,7 +916,7 @@ const OfferCard = memo(function OfferCard({
         className="rounded-xl py-2.5 items-center justify-center mt-3"
         style={{
           backgroundColor: disabled ? `${iconColor}22` : iconColor,
-          opacity: disabled && !effectIsActive && !(claimed && offer.kind === 'daily-free') ? 0.55 : 1,
+          opacity: disabled && !kindEffectIsActive && !(claimed && offer.kind === 'daily-free') ? 0.55 : 1,
         }}
       >
         <View className="flex-row items-center justify-center gap-1">
@@ -1092,7 +1070,6 @@ export default function StoreScreen() {
   const purchaseTheme = useAppStore((s) => s.purchaseTheme);
   const purchaseProfileBanner = useAppStore((s) => s.purchaseProfileBanner);
   const purchaseRingStyle = useAppStore((s) => s.purchaseRingStyle);
-  const purchaseOffer = useAppStore((s) => s.purchaseOffer);
   const applyEffect = useAppStore((s) => s.applyEffect);
   const claimDailyFree = useAppStore((s) => s.claimDailyFree);
 
@@ -1172,25 +1149,6 @@ export default function StoreScreen() {
     [totalCoins, purchaseRingStyle, t]
   );
 
-  const handleBuyOffer = useCallback(
-    (offer: Offer) => {
-      if (totalCoins < offer.price) {
-        showCustomModal({
-          title: t('store.insufficient'),
-          message: t('store.insufficientMsg'),
-        });
-        return;
-      }
-      if (purchaseOffer(offer.id, offer.price)) {
-        showCustomModal({
-          title: t('offers.purchased'),
-          message: t('offers.purchasedMsg'),
-        });
-      }
-    },
-    [totalCoins, purchaseOffer, t]
-  );
-
   const handleActivateOffer = useCallback(
     (offer: Offer) => {
       if (totalCoins < offer.price) {
@@ -1261,8 +1219,6 @@ export default function StoreScreen() {
       >
         <OfferCard
           offer={item}
-          activeEffect={activeEffects
-            .find((effect) => effect.id === item.id && effect.expiresAt > Date.now())}
           activeKindEffect={activeEffects
             .filter((effect) => effect.kind === item.kind)
             .reduce<ActiveEffect | undefined>(
@@ -1274,7 +1230,6 @@ export default function StoreScreen() {
             )}
           claimed={lastFreeClaimDate === getTodayKey()}
           totalCoins={totalCoins}
-          onBuy={handleBuyOffer}
           onActivate={handleActivateOffer}
           onClaim={handleClaimDailyFree}
         />
@@ -1284,7 +1239,6 @@ export default function StoreScreen() {
       activeEffects,
       lastFreeClaimDate,
       totalCoins,
-      handleBuyOffer,
       handleActivateOffer,
       handleClaimDailyFree,
       isRtl,

@@ -155,6 +155,7 @@ export interface DailyLog {
 export interface ActiveEffect {
   id: string;
   kind: OfferKind;
+  startedAt?: number;
   expiresAt: number;
 }
 
@@ -173,12 +174,9 @@ interface AppState {
   totalCoins: number;
   addCoins: (amount: number) => void;
   activeEffects: ActiveEffect[];
-  streakFreezes: number;
   frozenDays: string[];
   lastFreeClaimDate: string | null;
-  ownedOffers: string[];
   applyEffect: (offer: Offer) => boolean;
-  purchaseOffer: (offerId: string, price: number) => boolean;
   claimDailyFree: () => boolean;
   hasActiveEffect: (kind: string) => boolean;
   consumeStreakFreeze: (date?: string) => boolean;
@@ -279,10 +277,8 @@ export const useAppStore = create<AppState>()(
           };
         }),
       activeEffects: [],
-      streakFreezes: 0,
       frozenDays: [],
       lastFreeClaimDate: null,
-      ownedOffers: [],
       hasActiveEffect: (kind) =>
         get().activeEffects.some(
           (effect) => effect.kind === kind && effect.expiresAt > Date.now()
@@ -291,7 +287,8 @@ export const useAppStore = create<AppState>()(
         const catalogOffer = offers.find((item) => item.id === offer.id);
         if (
           !catalogOffer ||
-          (catalogOffer.kind !== 'multiplier' &&
+          (catalogOffer.kind !== 'streak-freeze' &&
+            catalogOffer.kind !== 'multiplier' &&
             catalogOffer.kind !== 'goal-reduce')
         ) {
           return false;
@@ -299,68 +296,38 @@ export const useAppStore = create<AppState>()(
 
         const state = get();
         const now = Date.now();
+        const activeKindEffect = state.activeEffects.find(
+          (effect) =>
+            effect.kind === catalogOffer.kind && effect.expiresAt > now
+        );
         if (
           Math.max(getStoredCoins(), state.totalCoins) < catalogOffer.price ||
-          state.activeEffects.some(
-            (effect) =>
-              effect.kind === catalogOffer.kind && effect.expiresAt > now
-          )
+          activeKindEffect
         ) {
           return false;
         }
 
+        const day = 24 * 60 * 60 * 1000;
         const duration =
-          catalogOffer.id === 'multiplier-7d'
-            ? 7 * 24 * 60 * 60 * 1000
-            : 24 * 60 * 60 * 1000;
+          catalogOffer.kind === 'streak-freeze'
+            ? catalogOffer.value * day
+            : catalogOffer.id === 'multiplier-7d'
+              ? 7 * day
+              : day;
         const newCoins =
           Math.max(getStoredCoins(), state.totalCoins) - catalogOffer.price;
         setStoredCoins(newCoins);
         set({
           totalCoins: newCoins,
-          ownedOffers: [...state.ownedOffers, catalogOffer.id],
           activeEffects: [
             ...state.activeEffects.filter((effect) => effect.expiresAt > now),
             {
               id: catalogOffer.id,
               kind: catalogOffer.kind,
+              startedAt: now,
               expiresAt: now + duration,
             },
           ],
-        });
-        return true;
-      },
-      purchaseOffer: (offerId, price) => {
-        const catalogOffer = offers.find((item) => item.id === offerId);
-        if (
-          !catalogOffer ||
-          catalogOffer.price !== price ||
-          (catalogOffer.kind !== 'coin-box' &&
-            catalogOffer.kind !== 'streak-freeze')
-        ) {
-          return false;
-        }
-
-        const state = get();
-        const balance = Math.max(getStoredCoins(), state.totalCoins);
-        if (balance < catalogOffer.price) return false;
-
-        const newCoins =
-          balance -
-          catalogOffer.price +
-          (catalogOffer.kind === 'coin-box' ? catalogOffer.value : 0);
-        setStoredCoins(newCoins);
-        set({
-          totalCoins: newCoins,
-          ownedOffers: [
-            ...state.ownedOffers,
-            ...(catalogOffer.kind === 'streak-freeze'
-              ? Array.from({ length: catalogOffer.value }, () => catalogOffer.id)
-              : [catalogOffer.id]),
-          ],
-          streakFreezes:
-            state.streakFreezes +
-            (catalogOffer.kind === 'streak-freeze' ? catalogOffer.value : 0),
         });
         return true;
       },
@@ -380,19 +347,25 @@ export const useAppStore = create<AppState>()(
       },
       consumeStreakFreeze: (date = getTodayKey()) => {
         const state = get();
-        if (state.streakFreezes <= 0 || state.frozenDays.includes(date)) {
-          return false;
-        }
+        if (state.frozenDays.includes(date)) return false;
 
-        const freezeIndex = state.ownedOffers.findIndex(
-          (id) =>
-            offers.find((offer) => offer.id === id)?.kind === 'streak-freeze'
-        );
-        const ownedOffers = [...state.ownedOffers];
-        if (freezeIndex !== -1) ownedOffers.splice(freezeIndex, 1);
+        const dayStart = new Date(`${date}T00:00:00`).getTime();
+        if (!Number.isFinite(dayStart)) return false;
+        const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+        const freezeIndex = state.activeEffects.findIndex((effect) => {
+          if (effect.kind !== 'streak-freeze') return false;
+          const offer = offers.find((item) => item.id === effect.id);
+          const startedAt =
+            effect.startedAt ??
+            effect.expiresAt - (offer?.value ?? 1) * 24 * 60 * 60 * 1000;
+          return startedAt < dayEnd && effect.expiresAt > dayStart;
+        });
+        if (freezeIndex === -1) return false;
+
+        const activeEffects = [...state.activeEffects];
+        activeEffects.splice(freezeIndex, 1);
         set({
-          streakFreezes: state.streakFreezes - 1,
-          ownedOffers,
+          activeEffects,
           frozenDays: [...state.frozenDays, date],
         });
         return true;
@@ -498,7 +471,7 @@ export const useAppStore = create<AppState>()(
         }
         let missedDate = shiftDate(newLog.date, 1);
         const today = getTodayKey();
-        while (missedDate < today && get().streakFreezes > 0) {
+        while (missedDate < today) {
           get().consumeStreakFreeze(missedDate);
           missedDate = shiftDate(missedDate, 1);
         }
@@ -666,7 +639,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 10,
+      version: 11,
       onRehydrateStorage: () => (state) => {
         state?.resetDailyQuestProgress();
         state?.refreshDailyTasks();
@@ -680,10 +653,8 @@ export const useAppStore = create<AppState>()(
         streakDays: state.streakDays,
         totalCoins: state.totalCoins,
         activeEffects: state.activeEffects,
-        streakFreezes: state.streakFreezes,
         frozenDays: state.frozenDays,
         lastFreeClaimDate: state.lastFreeClaimDate,
-        ownedOffers: state.ownedOffers,
         lastActiveDate: state.lastActiveDate,
         lastResetDate: state.lastResetDate,
         history: state.history,
@@ -700,6 +671,8 @@ export const useAppStore = create<AppState>()(
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
           currentThemeId?: string;
           accentColor?: AccentColor;
+          streakFreezes?: number;
+          ownedOffers?: string[];
         };
         const fallback = {
           themeMode: 'dark' as ThemeMode,
@@ -713,10 +686,8 @@ export const useAppStore = create<AppState>()(
           streakDays: 0,
           totalCoins: 0,
           activeEffects: [],
-          streakFreezes: 0,
           frozenDays: [],
           lastFreeClaimDate: null,
-          ownedOffers: [],
           lastActiveDate: getTodayKey(),
           lastResetDate: new Date().toISOString().split('T')[0],
           history: [],
@@ -743,6 +714,8 @@ export const useAppStore = create<AppState>()(
         const {
           currentThemeId: _legacyThemeId,
           accentColor: _legacyAccentColor,
+          streakFreezes: _legacyStreakFreezes,
+          ownedOffers: _legacyOwnedOffers,
           ...rest
         } = persisted;
         const tasksDate = persisted.tasksDate ?? getTodayKey();
@@ -797,16 +770,8 @@ export const useAppStore = create<AppState>()(
             persisted.ownedRingStyles ?? fallback.ownedRingStyles
           ).map(migrateRingStyleId),
           activeEffects: persisted.activeEffects ?? [],
-          streakFreezes:
-            persisted.streakFreezes ??
-            (persisted.ownedOffers ?? []).filter(
-              (id) =>
-                offers.find((offer) => offer.id === id)?.kind ===
-                'streak-freeze'
-            ).length,
           frozenDays: persisted.frozenDays ?? [],
           lastFreeClaimDate: persisted.lastFreeClaimDate ?? null,
-          ownedOffers: persisted.ownedOffers ?? [],
           // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
           dailyTasks: migratedTasks,
         } as AppState;

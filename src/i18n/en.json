@@ -222,14 +222,6 @@
       "claimed": "Claimed today"
     },
     "items": {
-      "coinBox500": {
-        "name": "500-Coin Box",
-        "desc": "Add 500 coins to your balance instantly"
-      },
-      "coinBox2000": {
-        "name": "2,000-Coin Box",
-        "desc": "Add 2,000 coins to your balance instantly"
-      },
       "streakFreeze1": {
         "name": "Streak Freeze (1 Day)",
         "desc": "Protect your streak for one day if you miss a day"
@@ -237,6 +229,10 @@
       "streakFreeze3": {
         "name": "Streak Freeze (3 Days)",
         "desc": "Protect your streak for three days"
+      },
+      "streakFreeze7": {
+        "name": "Streak Freeze (7 Days)",
+        "desc": "Protect your streak for seven days"
       },
       "multiplier24h": {
         "name": "Coin Multiplier (24 Hours)",

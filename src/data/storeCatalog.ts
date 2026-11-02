@@ -285,7 +285,6 @@ export const defaultRingStyleId = ringStyles[0].id;
 
 // ————— العروض —————
 export type OfferKind =
-  | 'coin-box'
   | 'streak-freeze'
   | 'multiplier'
   | 'goal-reduce'
@@ -303,23 +302,6 @@ export interface Offer {
 
 export const offers: Offer[] = [
   {
-    id: 'coin-box-500',
-    nameKey: 'offers.items.coinBox500.name',
-    descriptionKey: 'offers.items.coinBox500.desc',
-    price: 400,
-    kind: 'coin-box',
-    value: 500,
-  },
-  {
-    id: 'coin-box-2000',
-    nameKey: 'offers.items.coinBox2000.name',
-    descriptionKey: 'offers.items.coinBox2000.desc',
-    price: 1400,
-    kind: 'coin-box',
-    value: 2000,
-    premium: true,
-  },
-  {
     id: 'streak-freeze-1',
     nameKey: 'offers.items.streakFreeze1.name',
     descriptionKey: 'offers.items.streakFreeze1.desc',
@@ -334,6 +316,15 @@ export const offers: Offer[] = [
     price: 700,
     kind: 'streak-freeze',
     value: 3,
+    premium: true,
+  },
+  {
+    id: 'streak-freeze-7',
+    nameKey: 'offers.items.streakFreeze7.name',
+    descriptionKey: 'offers.items.streakFreeze7.desc',
+    price: 1400,
+    kind: 'streak-freeze',
+    value: 7,
     premium: true,
   },
   {

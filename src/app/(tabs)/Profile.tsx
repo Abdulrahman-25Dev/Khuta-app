@@ -39,6 +39,7 @@ import {
   Coins,
   Languages,
   LucideIcon,
+  BadgeInfo,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -241,124 +242,11 @@ const Profile = () => {
           </View>
         </View>
 
-        {/* 2. مفتاح الوضع الفاتح / الداكن */}
-        <View
-          className={`${rowDirection} items-center justify-between p-4 rounded-3xl border mb-4`}
-          style={{ backgroundColor: card, borderColor: border }}
-        >
-          <View className={`${rowDirection} items-center gap-3`}>
-            <View
-              className="w-9 h-9 rounded-full justify-center items-center"
-              style={{ backgroundColor: bg }}
-            >
-              {isDark ? (
-                <Moon color={accent} size={18} />
-              ) : (
-                <Sun color={accent} size={18} />
-              )}
-            </View>
-            <View>
-              <Text
-                className={`text-sm font-bold ${textAlignment}`}
-                style={{ color: text }}
-              >
-                {t('profile.darkMode')}
-              </Text>
-              <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
-                {isDark ? t('profile.enabled') : t('profile.disabled')}
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={isDark}
-            onValueChange={toggleTheme}
-            trackColor={{ false: '#CBD5E1', true: accent }}
-            thumbColor="#FFFFFF"
-          />
-        </View>
-
-        {/* 3. اختيار ريشة ألوان الهوية */}
-        <View
-          className="p-4 rounded-3xl border mb-6"
-          style={{ backgroundColor: card, borderColor: border }}
-        >
-          <View className={`${rowDirection} items-center gap-2 mb-3`}>
-            <Palette color={accent} size={18} />
-            {/* اسم المظهر يعكس المصدر النشط فعلياً (مظهر المتجر أو اللون الافتراضي) */}
-            <Text
-              className={`text-sm font-bold ${textAlignment}`}
-              style={{ color: text }}
-            >
-              {themeName}
-            </Text>
-          </View>
-
-          <View className={`${rowDirection} justify-around items-center pt-1`}>
-            {(Object.keys(colorPalettes) as AccentColor[]).map((key) => {
-              const palette = colorPalettes[key];
-              // علامة الاختيار تظهر فقط عندما يكون اللون الافتراضي هو المصدر النشط فعلاً
-              const isSelected = theme.kind === 'profile' && theme.id === key;
-
-              return (
-                <TouchableOpacity
-                  key={key}
-                  onPress={() => selectProfileTheme(key)}
-                  activeOpacity={0.8}
-                  style={{ backgroundColor: palette.primary }}
-                  className={`w-10 h-10 rounded-full justify-center items-center ${
-                    isSelected
-                      ? 'ring-2 ring-offset-2 ring-slate-400 scale-110'
-                      : 'opacity-80'
-                  }`}
-                >
-                  {isSelected && (
-                    <Check color="#FFFFFF" size={16} strokeWidth={3} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* 4. كارت الإحصائيات الشاملة */}
+        {/* 2. كارت الإحصائيات */}
         <View
           className="rounded-3xl border overflow-hidden mb-6"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <TouchableOpacity
-            onPress={() => languageSheetRef.current?.expand()}
-            activeOpacity={0.8}
-            className={`${rowDirection} items-center justify-between p-4 border-b`}
-            style={{ borderBottomColor: border }}
-          >
-            <View className={`${rowDirection} items-center gap-3`}>
-              <View
-                className="w-9 h-9 rounded-full justify-center items-center"
-                style={{ backgroundColor: bg }}
-              >
-                <Languages color={accent} size={18} />
-              </View>
-              <View>
-                <Text
-                  className={`text-sm font-bold ${textAlignment}`}
-                  style={{ color: text }}
-                >
-                  {t('profile.language')}
-                </Text>
-                <Text
-                  className={`text-xs ${textAlignment}`}
-                  style={{ color: subText }}
-                >
-                  {isArabic ? t('profile.arabic') : t('profile.english')}
-                </Text>
-              </View>
-            </View>
-            <ChevronLeft
-              color="#94A3B8"
-              size={18}
-              style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }}
-            />
-          </TouchableOpacity>
           <View className={`${rowDirection} p-4 justify-between`}>
             <View className="items-center flex-1">
               <Text style={{ color: accent }} className="text-base font-bold">
@@ -488,7 +376,7 @@ const Profile = () => {
                 className="w-9 h-9 rounded-full justify-center items-center"
                 style={{ backgroundColor: bg }}
               >
-                <User color={accent} size={18} />
+                <BadgeInfo color={accent} size={18} />
               </View>
               <View>
                 <Text
@@ -589,7 +477,7 @@ const Profile = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 7. قسم التنبيهات والإعدادات */}
+        {/* 7. إعدادات اللغة والمظهر والتنبيهات */}
         <Text
           className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
@@ -600,6 +488,99 @@ const Profile = () => {
           className="rounded-3xl border overflow-hidden mb-10"
           style={{ backgroundColor: card, borderColor: border }}
         >
+          <TouchableOpacity
+            onPress={() => languageSheetRef.current?.expand()}
+            activeOpacity={0.8}
+            className={`${rowDirection} items-center justify-between p-4 border-b`}
+            style={{ borderBottomColor: border }}
+          >
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <Languages color={accent} size={18} />
+              </View>
+              <View>
+                <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                  {t('profile.language')}
+                </Text>
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {isArabic ? t('profile.arabic') : t('profile.english')}
+                </Text>
+              </View>
+            </View>
+            <ChevronLeft
+              color="#94A3B8"
+              size={18}
+              style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }}
+            />
+          </TouchableOpacity>
+
+          <View
+            className={`${rowDirection} items-center justify-between p-4 border-b`}
+            style={{ borderBottomColor: border }}
+          >
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                {isDark ? <Moon color={accent} size={18} /> : <Sun color={accent} size={18} />}
+              </View>
+              <View>
+                <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                  {t('profile.darkMode')}
+                </Text>
+                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {isDark ? t('profile.enabled') : t('profile.disabled')}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              trackColor={{ false: '#CBD5E1', true: accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View className="p-4 border-b" style={{ borderBottomColor: border }}>
+            <View className={`${rowDirection} items-center gap-3 mb-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <Palette color={accent} size={18} />
+              </View>
+              <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                {themeName}
+              </Text>
+            </View>
+            <View className={`${rowDirection} justify-around items-center pt-1`}>
+              {(Object.keys(colorPalettes) as AccentColor[]).map((key) => {
+                const palette = colorPalettes[key];
+                const isSelected = theme.kind === 'profile' && theme.id === key;
+
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => selectProfileTheme(key)}
+                    activeOpacity={0.8}
+                    style={{ backgroundColor: palette.primary }}
+                    className={`w-10 h-10 rounded-full justify-center items-center ${
+                      isSelected
+                        ? 'ring-2 ring-offset-2 ring-slate-400 scale-110'
+                        : 'opacity-80'
+                    }`}
+                  >
+                    {isSelected && <Check color="#FFFFFF" size={16} strokeWidth={3} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
           <View className={`${rowDirection} items-center justify-between p-4 border-b`} style={{ borderBottomColor: border }}>
             <View className={`${rowDirection} items-center gap-3`}>
               <View
