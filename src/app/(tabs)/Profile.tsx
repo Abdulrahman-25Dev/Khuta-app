@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Switch,
@@ -40,6 +39,8 @@ import {
   Languages,
   LucideIcon,
   BadgeInfo,
+  Droplets,
+  Coffee,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -49,6 +50,7 @@ import {
   AccentColor,
 } from '../../../store/useAppStore';
 import { EditProfileModal, FieldType } from '../../components/EditProfileModal';
+import AppText from '../../components/AppText';
 import { appThemes, profileBanners } from '../../data/storeCatalog';
 import { useTheme } from '../../context/ThemeContext';
 import { showCustomModal } from '../../store/useModalStore';
@@ -182,6 +184,33 @@ const Profile = () => {
     languageSheetRef.current?.close();
   };
 
+  const waterSettings: {
+    field: Exclude<FieldType, null>;
+    label: string;
+    value: string;
+  }[] = [
+    {
+      field: 'waterGoalCups',
+      label: t('water.settings.goal'),
+      value: `${user.waterGoalCups} ${t('water.cups')}`,
+    },
+    {
+      field: 'waterReminderStart',
+      label: t('water.settings.start'),
+      value: user.waterReminderStart,
+    },
+    {
+      field: 'waterReminderEnd',
+      label: t('water.settings.end'),
+      value: user.waterReminderEnd,
+    },
+    {
+      field: 'waterReminderInterval',
+      label: t('water.settings.interval'),
+      value: `${user.waterReminderInterval} ${t('water.minutes')}`,
+    },
+  ];
+
   return (
     <SafeAreaView className="flex-1">
       <ScrollView className="flex-1 p-4">
@@ -224,20 +253,20 @@ const Profile = () => {
               </View>
             </View>
 
-            <Text
+            <AppText
               className="text-xl font-bold mt-3 text-center"
               style={{ color: text }}
             >
               {user.name}
-            </Text>
+            </AppText>
             <View className={`${rowDirection} items-center gap-1 mt-1 justify-center`}>
               <LevelIcon color={accent} size={18} />
-              <Text
+              <AppText
                 className="text-xs font-semibold"
                 style={{ color: subText }}
               >
                 {t('profile.level')} {currentLevel.level} • {t(currentLevel.titleKey)}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
@@ -249,48 +278,48 @@ const Profile = () => {
         >
           <View className={`${rowDirection} p-4 justify-between`}>
             <View className="items-center flex-1">
-              <Text style={{ color: accent }} className="text-base font-bold">
+              <AppText style={{ color: accent }} className="text-base font-bold">
                 {formatCompact(totalSteps)}
-              </Text>
-              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-[10px] mt-1" style={{ color: subText }}>
                 {t('profile.totalSteps')}
-              </Text>
+              </AppText>
             </View>
             <View
               className="w-[1px] h-full"
               style={{ backgroundColor: border }}
             />
             <View className="items-center flex-1">
-              <Text style={{ color: accent }} className="text-base font-bold">
+              <AppText style={{ color: accent }} className="text-base font-bold">
                 {formatNumber(bestStreak)}{' '}
                 {bestStreak === 1 ? t('profile.day') : t('profile.days')}
-              </Text>
-              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-[10px] mt-1" style={{ color: subText }}>
                 {t('profile.bestStreak')}
-              </Text>
+              </AppText>
             </View>
             <View
               className="w-[1px] h-full"
               style={{ backgroundColor: border }}
             />
             <View className="items-center flex-1">
-              <Text style={{ color: accent }} className="text-base font-bold">
+              <AppText style={{ color: accent }} className="text-base font-bold">
                 {formatCompact(totalCalories)}
-              </Text>
-              <Text className="text-[10px] mt-1" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-[10px] mt-1" style={{ color: subText }}>
                 {t('profile.calories')}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
 
         {/* 5. المتجر والربح */}
-        <Text
+        <AppText
           className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
           {t('profile.storeAndEarn')}
-        </Text>
+        </AppText>
         <View
           className="rounded-3xl border overflow-hidden mb-6"
           style={{ backgroundColor: card, borderColor: border }}
@@ -308,17 +337,17 @@ const Profile = () => {
                 <Store color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
-                  {t('app.name')}
-                </Text>
+                  {t('profile.store')}
+                </AppText>
                 <View className={`${rowDirection} items-center gap-1 mt-1`}>
                   <Coins color={accent} size={12} />
-                  <Text style={{ color: accent }} className="text-xs font-bold">
+                  <AppText style={{ color: accent }} className="text-xs font-bold">
                     {formatNumber(totalCoins)} {t('home.coins')}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
             </View>
@@ -327,12 +356,12 @@ const Profile = () => {
         </View>
 
         {/* 6. قسم البيانات الشخصية والبدنية */}
-        <Text
+        <AppText
           className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
           {t('profile.personalData')}
-        </Text>
+        </AppText>
         <View
           className="rounded-3xl border overflow-hidden mb-6"
           style={{ backgroundColor: card, borderColor: border }}
@@ -351,15 +380,15 @@ const Profile = () => {
                 <User color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.name')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {user.name}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
@@ -379,15 +408,15 @@ const Profile = () => {
                 <BadgeInfo color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.gender')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {t(`profile.${user.gender}`)}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
@@ -407,15 +436,15 @@ const Profile = () => {
                 <Weight color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.weight')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {user.weight} {t('home.weightKg')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
@@ -435,15 +464,15 @@ const Profile = () => {
                 <Ruler color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.height')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {user.height} {t('home.heightCm')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
@@ -462,15 +491,15 @@ const Profile = () => {
                 <Target color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.dailyGoal')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {user.dailyGoal?.toLocaleString('en-US')} {t('home.stepsPerDay')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft color="#94A3B8" size={18} style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }} />
@@ -478,12 +507,12 @@ const Profile = () => {
         </View>
 
         {/* 7. إعدادات اللغة والمظهر والتنبيهات */}
-        <Text
+        <AppText
           className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
           style={{ color: subText }}
         >
           {t('profile.settings')}
-        </Text>
+        </AppText>
         <View
           className="rounded-3xl border overflow-hidden mb-10"
           style={{ backgroundColor: card, borderColor: border }}
@@ -502,12 +531,12 @@ const Profile = () => {
                 <Languages color={accent} size={18} />
               </View>
               <View>
-                <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                <AppText className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
                   {t('profile.language')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {isArabic ? t('profile.arabic') : t('profile.english')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <ChevronLeft
@@ -529,12 +558,12 @@ const Profile = () => {
                 {isDark ? <Moon color={accent} size={18} /> : <Sun color={accent} size={18} />}
               </View>
               <View>
-                <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                <AppText className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
                   {t('profile.darkMode')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {isDark ? t('profile.enabled') : t('profile.disabled')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <Switch
@@ -553,9 +582,9 @@ const Profile = () => {
               >
                 <Palette color={accent} size={18} />
               </View>
-              <Text className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+              <AppText className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
                 {themeName}
-              </Text>
+              </AppText>
             </View>
             <View className={`${rowDirection} justify-around items-center pt-1`}>
               {(Object.keys(colorPalettes) as AccentColor[]).map((key) => {
@@ -590,15 +619,15 @@ const Profile = () => {
                 <Bell color={accent} size={18} />
               </View>
               <View>
-                <Text
+                <AppText
                   className={`text-sm font-bold ${textAlignment}`}
                   style={{ color: text }}
                 >
                   {t('profile.notifications')}
-                </Text>
-                <Text className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
                   {notificationsEnabled ? t('profile.enabled') : t('profile.disabled')}
-                </Text>
+                </AppText>
               </View>
             </View>
             <Switch
@@ -607,6 +636,107 @@ const Profile = () => {
               trackColor={{ false: '#CBD5E1', true: accent }}
               thumbColor="#FFFFFF"
             />
+          </View>
+        </View>
+
+        <AppText
+          className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
+          style={{ color: subText }}
+        >
+          {t('water.settings.title')}
+        </AppText>
+        <View
+          className="rounded-3xl border overflow-hidden mb-10"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <View
+            className={`${rowDirection} items-center justify-between p-4 border-b`}
+            style={{ borderBottomColor: border }}
+          >
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <Droplets color={accent} size={18} />
+              </View>
+              <View>
+                <AppText className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                  {t('water.settings.reminders')}
+                </AppText>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {user.waterNotificationsEnabled ? t('profile.enabled') : t('profile.disabled')}
+                </AppText>
+              </View>
+            </View>
+            <Switch
+              value={user.waterNotificationsEnabled}
+              onValueChange={(enabled) =>
+                updateUser({ waterNotificationsEnabled: enabled })
+              }
+              trackColor={{ false: '#CBD5E1', true: accent }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+          {waterSettings.map(({ field, label, value }, index) => (
+            <TouchableOpacity
+              key={field}
+              onPress={() => openEditModal(field)}
+              activeOpacity={0.8}
+              className={`${rowDirection} items-center justify-between p-4 ${
+                index < waterSettings.length - 1 ? 'border-b' : ''
+              }`}
+              style={
+                index < waterSettings.length - 1
+                  ? { borderBottomColor: border }
+                  : undefined
+              }
+            >
+              <AppText className={`text-sm font-bold ${textAlignment}`} style={{ color: text }}>
+                {label}
+              </AppText>
+              <View className={`${rowDirection} items-center gap-2`}>
+                <AppText className={`text-xs ${textAlignment}`} style={{ color: subText }}>
+                  {value}
+                </AppText>
+                <ChevronLeft
+                  color="#94A3B8"
+                  size={18}
+                  style={isArabic ? undefined : { transform: [{ scaleX: -1 }] }}
+                />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <AppText
+          className={`text-xs font-bold ${textAlignment} mb-2 ${isArabic ? 'pr-1' : 'pl-1'}`}
+          style={{ color: subText }}
+        >
+          {t('profile.supportDeveloper')}
+        </AppText>
+        <View
+          className="rounded-3xl border overflow-hidden mb-10"
+          style={{ backgroundColor: card, borderColor: border }}
+        >
+          <View className={`${rowDirection} items-center justify-between p-4`}>
+            <View className={`${rowDirection} items-center gap-3`}>
+              <View
+                className="w-9 h-9 rounded-full justify-center items-center"
+                style={{ backgroundColor: bg }}
+              >
+                <Coffee color={accent} size={18} />
+              </View>
+              <AppText
+                className={`text-sm font-bold ${textAlignment}`}
+                style={{ color: text }}
+              >
+                {t('profile.buyDeveloperCoffee')}
+              </AppText>
+            </View>
+            <AppText className="text-xs font-semibold" style={{ color: subText }}>
+              {t('profile.comingSoon')}
+            </AppText>
           </View>
         </View>
       </ScrollView>
@@ -635,9 +765,9 @@ const Profile = () => {
         handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
       >
         <BottomSheetView className="p-5">
-          <Text className="text-xl font-bold text-center" style={{ color: text }}>
+          <AppText className="text-xl font-bold text-center" style={{ color: text }}>
             {t('profile.language')}
-          </Text>
+          </AppText>
           <View className={`${rowDirection} gap-3 mt-3`}>
             {(['ar', 'en'] as const).map((language) => {
               const isSelected = language === (isArabic ? 'ar' : 'en');
@@ -652,11 +782,11 @@ const Profile = () => {
                     borderColor: isSelected ? accent : border,
                   }}
                 >
-                  <Text className="text-center font-bold" style={{ color: text }}>
+                  <AppText className="text-center font-bold" style={{ color: text }}>
                     {language === 'ar'
                       ? t('profile.arabic')
                       : t('profile.english')}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}

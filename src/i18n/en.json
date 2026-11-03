@@ -30,42 +30,34 @@
     "notAvailable": "Not available on this device",
     "permissionRequired": "Please enable motion permission in Settings",
     "sensorError": "Step sensor error",
-    "sensorErrorTitle": "Sensor error"
+    "sensorErrorTitle": "Sensor error",
+    "goalRewardMessage": "Well done! You earned today's goal reward 🎉"
+  },
+  "water": {
+    "title": "Water",
+    "progress": "{{current}} / {{goal}} cups",
+    "cups": "cups",
+    "minutes": "minutes",
+    "addCup": "Add a cup of water",
+    "undoCup": "Remove a cup of water",
+    "settings": {
+      "title": "Water",
+      "reminders": "Water reminders",
+      "goal": "Daily water goal",
+      "start": "Reminder start",
+      "end": "Reminder end",
+      "interval": "Reminder interval"
+    },
+    "notifications": {
+      "reminderTitle": "💧 Time to drink water",
+      "reminderBody": "Drink a cup of water to stay hydrated",
+      "reminderAfterGoal": "Keep yourself hydrated",
+      "goalCompleteTitle": "🎉 You reached your water goal!",
+      "goalCompleteBody": "Well done. Keep drinking water."
+    }
   },
   "splash": {
     "tagline": "Your movement. Your wealth."
-  },
-  "tasks": {
-    "title": "Daily tasks",
-    "today": "Today",
-    "withinTwoDays": "Within two days",
-    "withinDays": "Within {{count}} days",
-    "expiresToday": "Expires today",
-    "expiresAfter": "Expires in {{count}} days",
-    "completed": "Complete!",
-    "coinReward": "+{{count}} coins",
-    "types": {
-      "steps": {
-        "title_0": "Step challenge",
-        "title_1": "Today's steps",
-        "unit": "steps"
-      },
-      "distance": {
-        "title_0": "Distance challenge",
-        "title_1": "Walking distance",
-        "unit": "km"
-      },
-      "calories": {
-        "title_0": "Calorie challenge",
-        "title_1": "Calorie burner",
-        "unit": "cal"
-      },
-      "duration": {
-        "title_0": "Active time",
-        "title_1": "Session activity",
-        "unit": "min"
-      }
-    }
   },
   "history": {
     "today": "Today",
@@ -95,7 +87,7 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "theme": "Theme",
-    "store": "Store",
+    "store": "Khuta Store",
     "personalData": "Personal information",
     "name": "Username",
     "weight": "Weight",
@@ -106,6 +98,9 @@
     "dailyGoal": "Daily goal",
     "settings": "Settings",
     "notifications": "Daily goal notifications",
+    "supportDeveloper": "Support the developer",
+    "buyDeveloperCoffee": "Buy the developer a coffee",
+    "comingSoon": "Coming soon",
     "language": "Language",
     "storeAndEarn": "Store and rewards",
     "totalSteps": "Total steps",
@@ -124,6 +119,17 @@
       "heightPlaceholder": "Example: 170",
       "dailyGoalTitle": "Edit daily goal",
       "dailyGoalPlaceholder": "Example: 6000",
+      "waterGoalTitle": "Edit water goal",
+      "waterGoalPlaceholder": "Example: 10",
+      "waterReminderStartTitle": "Water reminder start",
+      "waterReminderEndTitle": "Water reminder end",
+      "waterReminderTimePlaceholder": "Example: 08:00",
+      "waterReminderIntervalTitle": "Reminder interval",
+      "waterReminderIntervalPlaceholder": "Example: 60",
+      "invalidValue": "Enter a valid value greater than zero",
+      "invalidTime": "Enter a 24-hour time, such as 08:00",
+      "invalidTimeRange": "The start time must be before the end time",
+      "intervalTooFrequent": "Choose a longer interval to reduce the number of reminders",
       "saveChanges": "Save changes"
     },
     "languageRestartTitle": "Restart the app",
@@ -155,7 +161,7 @@
     "owned": "Owned",
     "buyPrice": "Buy {{price}}",
     "insufficient": "Not enough coins",
-    "insufficientMsg": "Complete your daily tasks and reach your goal to earn more coins.",
+    "insufficientMsg": "Reach your daily goal to earn more coins.",
     "purchased": "Purchase complete",
     "purchasedThemeMsg": "Theme added to your collection. Activate it with the Apply button.",
     "purchasedBannerMsg": "Banner added to your collection. Activate it with the Apply button.",

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, {
   Easing,
@@ -13,14 +13,18 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../context/ThemeContext';
+import AppText from '../components/AppText';
 
 const SPLASH_DURATION = 2500;
 const LOGO_SIZE = 124;
 
 export default function SplashScreenRoute() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { accent, bg, subText } = useTheme();
+  const logoFontFamily = i18n.language.startsWith('ar')
+    ? 'Tajawal-Bold'
+    : 'Inter-Bold';
   const logoOpacity = useSharedValue(0);
   const logoScale = useSharedValue(0.8);
   const glowScale = useSharedValue(0.78);
@@ -95,6 +99,7 @@ export default function SplashScreenRoute() {
             {
               color: accent,
               textShadowColor: accent,
+              fontFamily: logoFontFamily,
             },
             logoAnimatedStyle,
           ]}
@@ -102,9 +107,9 @@ export default function SplashScreenRoute() {
         >
           {t('app.name')}
         </Animated.Text>
-        <Text style={[styles.tagline, { color: subText }]}>
+        <AppText style={[styles.tagline, { color: subText }]}>
           {t('splash.tagline')}
-        </Text>
+        </AppText>
       </View>
     </View>
   );

@@ -4,20 +4,14 @@ import { createMMKV } from 'react-native-mmkv';
 import { colorScheme } from 'nativewind';
 
 import {
-  generateDailyTasks,
-  getTaskDays,
-  getTaskCoins,
-  type Task,
-} from '../src/utils/taskGenerator';
-import { refreshTasksForToday, shiftDate } from '../src/utils/taskLifecycle';
-import { getUserLevel } from '../src/utils/levelUtils';
-import {
   calculateCalories,
   calculateDistanceKm,
   calculateStepLengthMeters,
 } from '../src/utils/stepUtils';
 import {
   handleDailyGoalReached,
+  sendWaterGoalCompleteNotification,
+  scheduleWaterReminders,
   syncEveningReminder,
   cancelEveningReminder,
 } from '../src/services/notificationService';
@@ -105,6 +99,14 @@ export const getTodayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+const shiftDate = (dateKey: string, days: number) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate()
+  ).padStart(2, '0')}`;
+};
+
 export const colorPalettes = {
   sunset: {
     name: 'الغروب (Sunset)',
@@ -133,14 +135,23 @@ export const colorPalettes = {
   },
 };
 
-interface UserProfile {
+export interface UserProfile {
   name: string;
   weight: number;
   height: number;
   gender: 'male' | 'female';
   dailyGoal: number;
+  waterGoalCups: number;
+  waterCupSizeMl: number;
+  waterReminderStart: string;
+  waterReminderEnd: string;
+  waterReminderInterval: number;
+  waterNotificationsEnabled: boolean;
   image?: string;
 }
+
+const getDefaultWaterGoalCups = (weight: number) =>
+  Math.max(1, Math.round((weight * 35) / 250));
 
 // 1. تعريف بنية السجل اليومي
 export interface DailyLog {
@@ -150,6 +161,7 @@ export interface DailyLog {
   calories: number;
   durationSeconds: number;
   goalReached: boolean;
+  waterCups: number;
 }
 
 export interface ActiveEffect {
@@ -182,29 +194,22 @@ interface AppState {
   consumeStreakFreeze: (date?: string) => boolean;
 
   lastActiveDate: string;
-  lastResetDate: string;
+  lastGoalRewardDate: string | null;
   setLastActiveDate: (date: string) => void;
-  resetDailyQuestProgress: () => void;
 
   // 2. حالة السجل ودوال التحديث
   history: DailyLog[];
-  addOrUpdateDailyLog: (log: Omit<DailyLog, 'goalReached'>) => void;
-  // إغلاق اليوم عند منتصف الليل: يثبّت سجل اليوم ويدفع التاريخ، دون أي مساس برصيد العملات
-  finalizeDay: (log: Omit<DailyLog, 'goalReached'>) => void;
-
-  // 3. المهام اليومية الديناميكية
-  dailyTasks: Task[];
-  tasksDate: string;
-  // تجديد المهام عند تغيّر التاريخ أو مستوى المستخدم
-  refreshDailyTasks: () => void;
-  // إنهاء مهمة وإضافة مكافأة العملات إليها
-  completeTask: (taskId: string) => void;
-  updateTaskProgress: (
-    taskId: string,
-    newProgress: number,
-    todayKey: string,
-    todayValue: number
+  addOrUpdateDailyLog: (
+    log: Omit<DailyLog, 'goalReached' | 'waterCups'> &
+      Partial<Pick<DailyLog, 'waterCups'>>
   ) => void;
+  // إغلاق اليوم عند منتصف الليل: يثبّت سجل اليوم ويدفع التاريخ، دون أي مساس برصيد العملات
+  finalizeDay: (
+    log: Omit<DailyLog, 'goalReached' | 'waterCups'> &
+      Partial<Pick<DailyLog, 'waterCups'>>
+  ) => void;
+  addWaterCup: () => void;
+  setWaterCups: (count: number) => void;
 
   // تفضيل التحكم بالتنبيهات (إشعار إنجاز الهدف + تذكير المساء)
   notificationsEnabled: boolean;
@@ -253,11 +258,38 @@ export const useAppStore = create<AppState>()(
         height: 160,
         gender: 'male',
         dailyGoal: 5000,
+        waterGoalCups: getDefaultWaterGoalCups(70),
+        waterCupSizeMl: 250,
+        waterReminderStart: '08:00',
+        waterReminderEnd: '22:00',
+        waterReminderInterval: 60,
+        waterNotificationsEnabled: true,
       },
-      updateUser: (newData) =>
-        set((state) => ({
-          user: { ...state.user, ...newData },
-        })),
+      updateUser: (newData) => {
+        const nextUser = { ...get().user, ...newData };
+        set({ user: nextUser });
+        if (
+          newData.waterGoalCups !== undefined ||
+          newData.waterCupSizeMl !== undefined ||
+          newData.waterReminderStart !== undefined ||
+          newData.waterReminderEnd !== undefined ||
+          newData.waterReminderInterval !== undefined ||
+          newData.waterNotificationsEnabled !== undefined
+        ) {
+          const todayLog = get().history.find(
+            (log) => log.date === getTodayKey()
+          );
+          void scheduleWaterReminders({
+            start: nextUser.waterReminderStart,
+            end: nextUser.waterReminderEnd,
+            interval: nextUser.waterReminderInterval,
+            enabled: nextUser.waterNotificationsEnabled,
+            goalReached: (todayLog?.waterCups ?? 0) >= nextUser.waterGoalCups,
+          }).catch((error) => {
+            console.error('Failed to reschedule water reminders:', error);
+          });
+        }
+      },
 
       streakDays: 0,
       // التهيئة من النسخة الاحتياطية السابقة (khuta_coins) لضمان عدم فقدان الرصيد المتراكم
@@ -372,20 +404,18 @@ export const useAppStore = create<AppState>()(
       },
 
       lastActiveDate: getTodayKey(),
-      lastResetDate: new Date().toISOString().split('T')[0],
+      lastGoalRewardDate: null,
       setLastActiveDate: (date) => set({ lastActiveDate: date }),
-      resetDailyQuestProgress: () =>
-        set((state) => {
-          const currentDate = getTodayKey();
-          if (state.lastResetDate === currentDate) return {};
-
-          return { lastResetDate: currentDate };
-        }),
 
       // 3. القيمة الافتراضية ودالة تحديث السجل
       history: [],
       addOrUpdateDailyLog: (newLog) =>
         set((state) => {
+          const existingIndex = state.history.findIndex(
+            (item) => item.date === newLog.date
+          );
+          const existingLog =
+            existingIndex >= 0 ? state.history[existingIndex] : undefined;
           const stepLengthMeters = calculateStepLengthMeters(
             state.user.height,
             state.user.gender
@@ -394,13 +424,9 @@ export const useAppStore = create<AppState>()(
             ...newLog,
             distance: calculateDistanceKm(newLog.steps, stepLengthMeters),
             calories: calculateCalories(newLog.steps, state.user.weight),
+            waterCups: newLog.waterCups ?? existingLog?.waterCups ?? 0,
           };
           const userGoal = state.user.dailyGoal;
-          const existingIndex = state.history.findIndex(
-            (item) => item.date === calculatedLog.date
-          );
-          const existingLog =
-            existingIndex >= 0 ? state.history[existingIndex] : undefined;
           const isCurrentDay = calculatedLog.date === getTodayKey();
           const goalReductionActive =
             isCurrentDay &&
@@ -415,8 +441,7 @@ export const useAppStore = create<AppState>()(
           const isGoalMet =
             calculatedLog.steps >= effectiveGoal ||
             (!isCurrentDay && (existingLog?.goalReached ?? false));
-          const wasGoalMet =
-            existingLog?.goalReached ?? false;
+          const wasGoalMet = existingLog?.goalReached ?? false;
 
           let updatedHistory = [...state.history];
 
@@ -447,8 +472,75 @@ export const useAppStore = create<AppState>()(
             });
           }
 
-          return { history: updatedHistory };
+          if (
+            !isCurrentDay ||
+            !isGoalMet ||
+            state.lastGoalRewardDate === calculatedLog.date
+          ) {
+            return { history: updatedHistory };
+          }
+
+          const totalCoins =
+            Math.max(getStoredCoins(), state.totalCoins) + 100;
+          setStoredCoins(totalCoins);
+          return {
+            history: updatedHistory,
+            totalCoins,
+            lastGoalRewardDate: calculatedLog.date,
+          };
         }),
+
+      addWaterCup: () => {
+        const todayLog = get().history.find(
+          (log) => log.date === getTodayKey()
+        );
+        get().setWaterCups((todayLog?.waterCups ?? 0) + 1);
+      },
+      setWaterCups: (count) => {
+        if (!Number.isFinite(count)) {
+          throw new RangeError('Water cup count must be a finite number.');
+        }
+
+        const state = get();
+        const today = getTodayKey();
+        const todayIndex = state.history.findIndex((log) => log.date === today);
+        const existingLog =
+          todayIndex >= 0 ? state.history[todayIndex] : undefined;
+        const previousCount = existingLog?.waterCups ?? 0;
+        const waterCups = Math.max(0, Math.floor(count));
+        const wasGoalReached = previousCount >= state.user.waterGoalCups;
+        const isGoalReached = waterCups >= state.user.waterGoalCups;
+        const todayLog: DailyLog = {
+          date: today,
+          steps: existingLog?.steps ?? 0,
+          distance: existingLog?.distance ?? 0,
+          calories: existingLog?.calories ?? 0,
+          durationSeconds: existingLog?.durationSeconds ?? 0,
+          goalReached: existingLog?.goalReached ?? false,
+          waterCups,
+        };
+        const history = [...state.history];
+        if (todayIndex >= 0) history[todayIndex] = todayLog;
+        else history.push(todayLog);
+        set({ history });
+
+        if (!wasGoalReached && isGoalReached) {
+          void sendWaterGoalCompleteNotification().catch((error) => {
+            console.error('Failed to send water goal notification:', error);
+          });
+        }
+        if (wasGoalReached !== isGoalReached) {
+          void scheduleWaterReminders({
+            start: state.user.waterReminderStart,
+            end: state.user.waterReminderEnd,
+            interval: state.user.waterReminderInterval,
+            enabled: state.user.waterNotificationsEnabled,
+            goalReached: isGoalReached,
+          }).catch((error) => {
+            console.error('Failed to update water reminder message:', error);
+          });
+        }
+      },
 
       // إغلاق اليوم: تثبيت سجل اليوم ثم تقدم التاريخ. رصيد العملات (totalCoins)
       // يبقى كما هو ولا يُعدَّل نهائياً هنا.
@@ -476,7 +568,6 @@ export const useAppStore = create<AppState>()(
           missedDate = shiftDate(missedDate, 1);
         }
         set({ lastActiveDate: getTodayKey() });
-        get().refreshDailyTasks();
         // Trigger 2: بعد انقلاب التاريخ نُبقي جدولة تذكير المساء متزامنة (اليوم غير مكتمل بعد)
         void syncEveningReminder({
           goalMetToday: false,
@@ -484,70 +575,6 @@ export const useAppStore = create<AppState>()(
           todayKey: getTodayKey(),
         });
       },
-
-      // المهام اليومية: تُولَّد من تاريخ اليوم ومستوى المستخدم، وتظل ثابتة طوال اليوم
-      dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-      tasksDate: getTodayKey(),
-      refreshDailyTasks: () =>
-        set((state) => {
-          const today = getTodayKey();
-          const totalSteps = state.history.reduce(
-            (sum, log) => sum + log.steps,
-            0
-          );
-          const userLevel = getUserLevel(totalSteps).level;
-          const nextTasks = refreshTasksForToday(
-            state.dailyTasks,
-            today,
-            userLevel
-          );
-
-          return {
-            lastResetDate: today,
-            tasksDate: today,
-            dailyTasks: nextTasks,
-          };
-        }),
-      updateTaskProgress: (taskId, newProgress, todayKey, todayValue) =>
-        set((state) => ({
-          dailyTasks: state.dailyTasks.map((task) => {
-            if (task.id !== taskId) return task;
-            const dailyProgress = { ...task.dailyProgress };
-            dailyProgress[todayKey] = Math.max(
-              dailyProgress[todayKey] ?? 0,
-              todayValue
-            );
-            return { ...task, progress: newProgress, dailyProgress };
-          }),
-        })),
-      completeTask: (taskId) =>
-        set((state) => {
-          const task = state.dailyTasks.find((t) => t.id === taskId);
-          if (!task || task.completed) return {};
-          const previousCoins = Math.max(getStoredCoins(), state.totalCoins);
-          const multiplierActive = state.activeEffects.some(
-            (effect) =>
-              effect.kind === 'multiplier' && effect.expiresAt > Date.now()
-          );
-          const newCoins =
-            previousCoins + task.coins * (multiplierActive ? 2 : 1);
-          setStoredCoins(newCoins);
-          const today = getTodayKey();
-          const totalSteps = state.history.reduce(
-            (sum, log) => sum + log.steps,
-            0
-          );
-          const userLevel = getUserLevel(totalSteps).level;
-          const completedTasks = state.dailyTasks.map((currentTask) =>
-            currentTask.id === taskId
-              ? { ...currentTask, completed: true }
-              : currentTask
-          );
-          return {
-            totalCoins: newCoins,
-            dailyTasks: refreshTasksForToday(completedTasks, today, userLevel),
-          };
-        }),
 
       // تفعيل/تعطيل التنبيهات + مزامنة جدولة تذكير المساء فوراً
       notificationsEnabled: true,
@@ -639,11 +666,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 11,
-      onRehydrateStorage: () => (state) => {
-        state?.resetDailyQuestProgress();
-        state?.refreshDailyTasks();
-      },
+      version: 12,
       // التخفيف: نحفظ بيانات الحالة الضرورية فقط، ومنها رصيد العملات (totalCoins)
       // لضمان بقاء الرصيد المتراكم محفوظاً عبر إعادة فتح التطبيق وعبر الأيام.
       partialize: (state) => ({
@@ -656,10 +679,8 @@ export const useAppStore = create<AppState>()(
         frozenDays: state.frozenDays,
         lastFreeClaimDate: state.lastFreeClaimDate,
         lastActiveDate: state.lastActiveDate,
-        lastResetDate: state.lastResetDate,
+        lastGoalRewardDate: state.lastGoalRewardDate,
         history: state.history,
-        dailyTasks: state.dailyTasks,
-        tasksDate: state.tasksDate,
         notificationsEnabled: state.notificationsEnabled,
         currentProfileBannerId: state.currentProfileBannerId,
         activeRingStyle: state.activeRingStyle,
@@ -667,12 +688,15 @@ export const useAppStore = create<AppState>()(
         ownedProfileBanners: state.ownedProfileBanners,
         ownedRingStyles: state.ownedRingStyles,
       }),
-      migrate: (persistedState, version) => {
+      migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
           currentThemeId?: string;
           accentColor?: AccentColor;
           streakFreezes?: number;
           ownedOffers?: string[];
+          dailyTasks?: unknown;
+          tasksDate?: string;
+          lastResetDate?: string;
         };
         const fallback = {
           themeMode: 'dark' as ThemeMode,
@@ -682,6 +706,12 @@ export const useAppStore = create<AppState>()(
             height: 160,
             gender: 'male',
             dailyGoal: 5000,
+            waterGoalCups: getDefaultWaterGoalCups(70),
+            waterCupSizeMl: 250,
+            waterReminderStart: '08:00',
+            waterReminderEnd: '22:00',
+            waterReminderInterval: 60,
+            waterNotificationsEnabled: true,
           },
           streakDays: 0,
           totalCoins: 0,
@@ -689,10 +719,8 @@ export const useAppStore = create<AppState>()(
           frozenDays: [],
           lastFreeClaimDate: null,
           lastActiveDate: getTodayKey(),
-          lastResetDate: new Date().toISOString().split('T')[0],
+          lastGoalRewardDate: null,
           history: [],
-          dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-          tasksDate: getTodayKey(),
           notificationsEnabled: true,
           activeTheme: {
             kind: 'store',
@@ -716,40 +744,11 @@ export const useAppStore = create<AppState>()(
           accentColor: _legacyAccentColor,
           streakFreezes: _legacyStreakFreezes,
           ownedOffers: _legacyOwnedOffers,
+          dailyTasks: _legacyDailyTasks,
+          tasksDate: _legacyTasksDate,
+          lastResetDate: _legacyLastResetDate,
           ...rest
         } = persisted;
-        const tasksDate = persisted.tasksDate ?? getTodayKey();
-        const fallbackTitles: Record<Task['type'], string> = {
-          steps: 'تحدي الخطوات',
-          distance: 'تحدي المسافة',
-          calories: 'تحدي السعرات',
-          duration: 'وقت النشاط',
-        };
-        const fallbackUnits: Record<Task['type'], string> = {
-          steps: 'خطوة',
-          distance: 'كم',
-          calories: 'سعرة',
-          duration: 'دقيقة',
-        };
-        const migratedTasks: Task[] = (
-          persisted.dailyTasks ?? fallback.dailyTasks
-        ).map((task) => {
-          const days = task.days ?? getTaskDays(task.type, task.target);
-          const startDate = task.startDate ?? tasksDate;
-          return {
-            ...task,
-            title: task.title ?? fallbackTitles[task.type],
-            titleKey: task.titleKey ?? `tasks.types.${task.type}.title_0`,
-            unit: task.unit ?? fallbackUnits[task.type],
-            unitKey: task.unitKey ?? `tasks.types.${task.type}.unit`,
-            days,
-            coins: task.coins ?? getTaskCoins(task.type, task.target),
-            startDate,
-            expiresAt: task.expiresAt ?? shiftDate(startDate, days - 1),
-            progress: version < 6 ? 0 : (task.progress ?? 0),
-            dailyProgress: version < 6 ? {} : (task.dailyProgress ?? {}),
-          };
-        });
         const migrateRingStyleId = (id: string) =>
           id === 'hourglass-ring' ? 'spiral-ring' : id;
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
@@ -760,6 +759,16 @@ export const useAppStore = create<AppState>()(
             ...fallback.user,
             ...(persisted.user ?? {}),
             gender: persisted.user?.gender ?? 'male',
+            waterGoalCups:
+              persisted.user?.waterGoalCups ??
+              getDefaultWaterGoalCups(persisted.user?.weight ?? fallback.user.weight),
+            waterCupSizeMl: persisted.user?.waterCupSizeMl ?? 250,
+            waterReminderStart: persisted.user?.waterReminderStart ?? '08:00',
+            waterReminderEnd: persisted.user?.waterReminderEnd ?? '22:00',
+            waterReminderInterval:
+              persisted.user?.waterReminderInterval ?? 60,
+            waterNotificationsEnabled:
+              persisted.user?.waterNotificationsEnabled ?? true,
           },
           // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
           activeTheme: legacyActiveTheme,
@@ -772,8 +781,11 @@ export const useAppStore = create<AppState>()(
           activeEffects: persisted.activeEffects ?? [],
           frozenDays: persisted.frozenDays ?? [],
           lastFreeClaimDate: persisted.lastFreeClaimDate ?? null,
-          // ضمان مطابقة الإطار الزمني والمكافآت للمهام المحفوظة مع القواعد الحالية
-          dailyTasks: migratedTasks,
+          lastGoalRewardDate: persisted.lastGoalRewardDate ?? null,
+          history: (persisted.history ?? []).map((log) => ({
+            ...log,
+            waterCups: log.waterCups ?? 0,
+          })),
         } as AppState;
       },
     }

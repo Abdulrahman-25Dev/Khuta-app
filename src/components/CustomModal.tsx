@@ -1,7 +1,8 @@
 import React from 'react';
-import { Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Pressable, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import AppText from './AppText';
 import { useTheme } from '../context/ThemeContext';
 import { hideCustomModal, useModalStore } from '../store/useModalStore';
 
@@ -49,20 +50,20 @@ export function CustomModal({
           style={{ backgroundColor: card, borderColor: border, borderWidth: 1 }}
           onPress={() => undefined}
         >
-          <Text
+          <AppText
             className="text-xl font-bold text-center"
             style={{ color: text }}
           >
             {title}
-          </Text>
+          </AppText>
 
           {message ? (
-            <Text
+            <AppText
               className="mt-3 text-center text-sm leading-6"
               style={{ color: subText }}
             >
               {message}
-            </Text>
+            </AppText>
           ) : null}
 
           <View className={`mt-5 ${rowDirection} justify-end gap-2`}>
@@ -84,12 +85,12 @@ export function CustomModal({
                     borderColor: isPrimary ? accent : border,
                   }}
                 >
-                  <Text
+                  <AppText
                     className="text-center text-sm font-bold"
                     style={{ color: isPrimary ? '#FFFFFF' : text }}
                   >
                     {button.text}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}

@@ -7,8 +7,11 @@ import { useTheme } from '../../context/ThemeContext';
 // سطح شريط التبويب: يتبع السياق الذرّي (نفس إطار قراءة المتجر) فلا يتأخر
 // لون الشريط عن لون الكروت والخلفية أثناء تبديل الوضع الفاتح/الداكن.
 export default function TabLayout() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isDarkMode, accent, card, border } = useTheme();
+  const isArabic = (i18n.resolvedLanguage ?? i18n.language)
+    .toLowerCase()
+    .startsWith('ar');
 
   const inactiveColor = isDarkMode ? '#8B949E' : '#94A3B8';
 
@@ -19,6 +22,9 @@ export default function TabLayout() {
           headerShown: false,
           tabBarActiveTintColor: accent,
           tabBarInactiveTintColor: inactiveColor,
+          tabBarLabelStyle: {
+            fontFamily: isArabic ? 'Tajawal-Bold' : 'Inter-Bold',
+          },
           tabBarStyle: {
             backgroundColor: card,
             borderTopColor: border,

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
   StatusBar,
@@ -40,6 +39,7 @@ import {
 
 import { getTodayKey, useAppStore } from '../../../store/useAppStore';
 import { BadgeIcon } from '../../components/BadgeIcon';
+import AppText from '../../components/AppText';
 import ProgressRing from '../../components/ProgressRing';
 import { useTheme } from '../../context/ThemeContext';
 import { showCustomModal } from '../../store/useModalStore';
@@ -151,9 +151,9 @@ const ActivePlaceholder = memo(function ActivePlaceholder({
           className="h-2.5 w-2.5 rounded-full"
           style={{ backgroundColor: accent }}
         />
-        <Text className="text-[10px] font-bold" style={{ color: accent }}>
+        <AppText className="text-[10px] font-bold" style={{ color: accent }}>
           {t('store.active')}
-        </Text>
+        </AppText>
       </View>
     </View>
   );
@@ -179,9 +179,9 @@ const ActionButton = memo(function ActionButton({
     return (
       <View>
         <View className="h-5 items-center justify-center mb-1.5 opacity-60">
-          <Text className="text-[9px] font-bold" style={{ color: primary }}>
+          <AppText className="text-[9px] font-bold" style={{ color: primary }}>
             {t('store.owned')}
-          </Text>
+          </AppText>
         </View>
         <ActivePlaceholder accent={primary} />
       </View>
@@ -202,7 +202,7 @@ const ActionButton = memo(function ActionButton({
         }}
         className="items-center"
       >
-        <Text className="text-white font-bold text-sm">{t('store.apply')}</Text>
+        <AppText className="text-white font-bold text-sm">{t('store.apply')}</AppText>
       </TouchableOpacity>
     );
   }
@@ -220,9 +220,9 @@ const ActionButton = memo(function ActionButton({
       className={`items-center border ${rowDirection} justify-center gap-1`}
     >
       <Coins color={primary} size={14} />
-      <Text style={{ color: primary }} className="font-bold text-sm">
+      <AppText style={{ color: primary }} className="font-bold text-sm">
         {t('store.buyPrice', { price: formatNumber(price ?? 0) })}
-      </Text>
+      </AppText>
     </TouchableOpacity>
   );
 });
@@ -303,18 +303,18 @@ const ThemeCard = memo(function ThemeCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+        <AppText className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
           {t(item.nameKey)}
-        </Text>
+        </AppText>
         {!owned && (
           <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={item.accent} size={10} />
-            <Text
+            <AppText
               style={{ color: item.accent }}
               className="text-[10px] font-bold"
             >
               {formatNumber(item.price)}
-            </Text>
+            </AppText>
           </View>
         )}
       </View>
@@ -772,18 +772,18 @@ const RingStyleCard = memo(function RingStyleCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+        <AppText className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
           {t(item.nameKey)}
-        </Text>
+        </AppText>
         {!owned && (
           <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={item.accent} size={10} />
-            <Text
+            <AppText
               style={{ color: item.accent }}
               className="text-[10px] font-bold"
             >
               {formatNumber(item.price)}
-            </Text>
+            </AppText>
           </View>
         )}
       </View>
@@ -893,22 +893,22 @@ const OfferCard = memo(function OfferCard({
           {icon}
         </View>
         <View className="flex-1">
-          <Text className="text-sm font-bold" style={{ color: text }}>
+          <AppText className="text-sm font-bold" style={{ color: text }}>
             {t(offer.nameKey)}
-          </Text>
+          </AppText>
           {offer.kind !== 'daily-free' && (
             <View className="flex-row items-center gap-1 mt-1">
               <Coins color={iconColor} size={12} />
-              <Text className="text-xs font-bold" style={{ color: iconColor }}>
+              <AppText className="text-xs font-bold" style={{ color: iconColor }}>
                 {formatNumber(offer.price)}
-              </Text>
+              </AppText>
             </View>
           )}
         </View>
       </View>
-      <Text className="text-xs leading-5 mt-3 flex-1" style={{ color: subText }}>
+      <AppText className="text-xs leading-5 mt-3 flex-1" style={{ color: subText }}>
         {t(offer.descriptionKey)}
-      </Text>
+      </AppText>
       <TouchableOpacity
         activeOpacity={0.8}
         disabled={disabled}
@@ -920,25 +920,25 @@ const OfferCard = memo(function OfferCard({
         }}
       >
         <View className="flex-row items-center justify-center gap-1">
-          <Text
+          <AppText
             numberOfLines={1}
             className="text-xs font-bold px-1"
             style={{ color: disabled ? iconColor : '#FFFFFF' }}
           >
             {buttonLabel}
-          </Text>
+          </AppText>
           {offer.kind !== 'daily-free' && !kindEffectIsActive && (
             <View className="flex-row items-center gap-0.5">
               <Coins
                 color={disabled ? iconColor : '#FFFFFF'}
                 size={12}
               />
-              <Text
+              <AppText
                 className="text-xs font-bold"
                 style={{ color: disabled ? iconColor : '#FFFFFF' }}
               >
                 {formatNumber(offer.price)}
-              </Text>
+              </AppText>
             </View>
           )}
         </View>
@@ -1018,15 +1018,15 @@ const BannerCard = memo(function BannerCard({
         {badge && <StatusBadge type={badge} />}
       </View>
       <View className="px-1 pt-2 pb-1">
-        <Text className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
+        <AppText className={`text-xs font-bold ${textAlignment}`} style={{ color: text }}>
           {t(item.nameKey)}
-        </Text>
+        </AppText>
         {!owned && (
           <View className={`${rowDirection} items-center gap-1 mt-0.5`}>
             <Coins color={primary} size={10} />
-            <Text style={{ color: primary }} className="text-[10px] font-bold">
+            <AppText style={{ color: primary }} className="text-[10px] font-bold">
               {formatNumber(item.price)}
-            </Text>
+            </AppText>
           </View>
         )}
       </View>
@@ -1258,14 +1258,14 @@ export default function StoreScreen() {
           style={{ backgroundColor: card, borderColor: border }}
         >
           <Coins color={accent} size={15} />
-          <Text style={{ color: accent }} className="text-sm font-black">
+          <AppText style={{ color: accent }} className="text-sm font-black">
             {formatNumber(totalCoins)}
-          </Text>
+          </AppText>
         </View>
 
-        <Text className="text-base font-black" style={{ color: text }}>
+        <AppText className="text-base font-black" style={{ color: text }}>
           {t('store.title')}
-        </Text>
+        </AppText>
 
         <TouchableOpacity
           onPress={() => router.back()}
@@ -1297,23 +1297,23 @@ export default function StoreScreen() {
               style={isActive ? { backgroundColor: accent } : undefined}
               className="flex-1 py-2 rounded-xl items-center"
             >
-              <Text
+              <AppText
                 className="text-sm font-bold"
                 style={{ color: isActive ? '#FFFFFF' : subText }}
               >
                 {t(tab.labelKey)}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <Text
+      <AppText
         className="text-xs font-bold text-center mb-3 px-6"
         style={{ color: subText }}
       >
         {activeTabData ? t(activeTabData.hintKey) : null}
-      </Text>
+      </AppText>
 
       {/* المحتوى حسب التبويب */}
       {activeTab === 'themes' ? (

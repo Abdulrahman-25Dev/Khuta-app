@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BarChart } from 'react-native-gifted-charts';
-import { Footprints } from 'lucide-react-native';
+import { Footprints, Snowflake } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, DailyLog } from '../../../store/useAppStore';
 import { useTheme } from '../../context/ThemeContext';
+import AppText from '../../components/AppText';
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -31,29 +32,33 @@ const getCurrentStreak = (history: DailyLog[], frozenDays: string[]) => {
   const goalDays = new Set(
     history.filter((l) => l.goalReached).map((l) => l.date)
   );
-  frozenDays.forEach((date) => goalDays.add(date));
+  const frozenDaySet = new Set(frozenDays);
   let streak = 0;
   const cursor = new Date();
   if (!goalDays.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-  while (goalDays.has(toDateKey(cursor))) {
-    streak += 1;
+  while (true) {
+    const date = toDateKey(cursor);
+    if (goalDays.has(date)) {
+      streak += 1;
+    } else if (!frozenDaySet.has(date)) {
+      break;
+    }
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 };
 
 const getLongestStreak = (history: DailyLog[], frozenDays: string[]) => {
-  const goalDays = [
-    ...new Set([
-      ...history.filter((l) => l.goalReached).map((l) => l.date),
-      ...frozenDays,
-    ]),
-  ].sort();
+  const goalDays = new Set(
+    history.filter((l) => l.goalReached).map((l) => l.date)
+  );
+  const streakDays = [...new Set([...goalDays, ...frozenDays])].sort();
   let longest = 0;
   let run = 0;
   let prev: string | null = null;
-  for (const date of goalDays) {
-    run = prev !== null && daysBetween(prev, date) === 1 ? run + 1 : 1;
+  for (const date of streakDays) {
+    if (prev === null || daysBetween(prev, date) !== 1) run = 0;
+    if (goalDays.has(date)) run += 1;
     longest = Math.max(longest, run);
     prev = date;
   }
@@ -67,6 +72,12 @@ const History = () => {
     i18n.dir() === 'rtl' ? 'flex-row-reverse' : 'flex-row';
   const textAlignment = i18n.dir() === 'rtl' ? 'text-right' : 'text-left';
   const contentAlignment = i18n.dir() === 'rtl' ? 'items-end' : 'items-start';
+  const chartFontFamily = i18n.language.startsWith('ar')
+    ? 'Tajawal'
+    : 'Inter';
+  const chartBoldFontFamily = i18n.language.startsWith('ar')
+    ? 'Tajawal-Bold'
+    : 'Inter-Bold';
   // الألوان من السياق الذرّي: لون التمييز + أسطح الكروت والنصوص في نفس الإطار
   const { accent, bg, card, border, text, subText } = useTheme();
 
@@ -102,12 +113,20 @@ const History = () => {
   // بيانات الرسم البياني من السجل مع تطبيق ألوان الثيم
   const barData = weekDays.map((day) => {
     const log = logsByDate.get(day.key);
+    const isFrozenDay = frozenDays.includes(day.key) && !log?.goalReached;
     return {
       value: log?.steps ?? 0,
       label: day.label,
       frontColor: log?.goalReached || frozenDays.includes(day.key)
           ? accent
           : `${accent}66`,
+      topLabelComponent: isFrozenDay
+        ? () => (
+            <View style={{ alignItems: 'center', marginBottom: 4 }}>
+              <Snowflake size={12} color={accent} />
+            </View>
+          )
+        : undefined,
     };
   });
 
@@ -124,54 +143,54 @@ const History = () => {
           className="flex-1 p-3 rounded-2xl items-center border"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <Text className="text-xs" style={{ color: subText }}>
+          <AppText className="text-xs" style={{ color: subText }}>
             {t('history.today')}
-          </Text>
-          <Text
+          </AppText>
+          <AppText
             style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(todaySteps)}
-          </Text>
-          <Text className="text-[10px]" style={{ color: subText }}>
+          </AppText>
+          <AppText className="text-[10px]" style={{ color: subText }}>
             {t('history.steps')}
-          </Text>
+          </AppText>
         </View>
 
         <View
           className="flex-1 p-3 rounded-2xl items-center border"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <Text className="text-xs" style={{ color: subText }}>
+          <AppText className="text-xs" style={{ color: subText }}>
             {t('history.average')}
-          </Text>
-          <Text
+          </AppText>
+          <AppText
             style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(weekAverage)}
-          </Text>
-          <Text className="text-[10px]" style={{ color: subText }}>
+          </AppText>
+          <AppText className="text-[10px]" style={{ color: subText }}>
             {t('history.stepsPerDay')}
-          </Text>
+          </AppText>
         </View>
 
         <View
           className="flex-1 p-3 rounded-2xl items-center border"
           style={{ backgroundColor: card, borderColor: border }}
         >
-          <Text className="text-xs" style={{ color: subText }}>
+          <AppText className="text-xs" style={{ color: subText }}>
             {t('history.total')}
-          </Text>
-          <Text
+          </AppText>
+          <AppText
             style={{ color: accent }}
             className="text-lg font-bold my-1"
           >
             {formatCompact(weekTotal)}
-          </Text>
-          <Text className="text-[10px]" style={{ color: subText }}>
+          </AppText>
+          <AppText className="text-[10px]" style={{ color: subText }}>
             {t('history.week')}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -180,12 +199,12 @@ const History = () => {
         className="p-4 rounded-3xl border mb-5"
         style={{ backgroundColor: card, borderColor: border }}
       >
-        <Text
+        <AppText
           className={`text-base font-bold mb-5 ${textAlignment}`}
           style={{ color: text }}
         >
           {t('history.weeklySteps')}
-        </Text>
+        </AppText>
 
         <View className="items-center overflow-hidden">
           <BarChart
@@ -195,11 +214,16 @@ const History = () => {
             initialSpacing={10}
             barBorderRadius={6}
             showGradient={false}
-            yAxisTextStyle={{ color: subTextColor, fontSize: 10 }}
+            yAxisTextStyle={{
+              color: subTextColor,
+              fontSize: 10,
+              fontFamily: chartFontFamily,
+            }}
             xAxisLabelTextStyle={{
               color: labelTextColor,
               fontSize: 11,
               fontWeight: '600',
+              fontFamily: chartBoldFontFamily,
             }}
             yAxisColor="transparent"
             xAxisColor={gridBorderColor}
@@ -219,19 +243,19 @@ const History = () => {
       >
         <View className={`${rowDirection} justify-between items-center my-2`}>
           <View className={contentAlignment}>
-            <Text
+            <AppText
               className={`text-xs font-bold mb-1 ${textAlignment}`}
               style={{ color: subText }}
             >
               {t('history.currentStreak')}
-            </Text>
+            </AppText>
             <View className={`${rowDirection} items-baseline gap-1`}>
-              <Text className="text-4xl font-extrabold" style={{ color: text }}>
+              <AppText className="text-4xl font-extrabold" style={{ color: text }}>
                 {currentStreak}
-              </Text>
-              <Text className="text-xl font-bold" style={{ color: text }}>
+              </AppText>
+              <AppText className="text-xl font-bold" style={{ color: text }}>
                 {t('history.days')}
-              </Text>
+              </AppText>
             </View>
           </View>
 
@@ -243,9 +267,9 @@ const History = () => {
           </View>
         </View>
 
-        <Text className="text-xs text-center leading-5 px-2" style={{ color: subText }}>
+        <AppText className="text-xs text-center leading-5 px-2" style={{ color: subText }}>
           {t('history.streakMessage', { currentStreak, longestStreak })}
-        </Text>
+        </AppText>
       </View>
     </SafeAreaView>
   );

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Text,
   View,
   ScrollView,
   StatusBar,
@@ -25,8 +24,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { ringStyles } from '../../data/storeCatalog';
 import { storage } from '../../utils/storage';
 import { applyStepCoins } from '../../services/coinService';
-import DailyTasksList from '../../components/DailyTasksList';
+import AppText from '../../components/AppText';
 import ProgressRing from '../../components/ProgressRing';
+import WaterCard from '../../components/WaterCard';
 import {
   calculateCalories,
   calculateDistanceKm,
@@ -40,7 +40,7 @@ type PedometerStatusKey =
 
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
-  const { user, addCoins, totalCoins, activeRingStyle } = useAppStore();
+  const { user, addCoins, totalCoins, activeRingStyle, history } = useAppStore();
   const isMultiplierActive = useAppStore((state) =>
     state.hasActiveEffect('multiplier')
   );
@@ -61,6 +61,11 @@ export default function HomeScreen() {
   const goal = isGoalReductionActive
     ? Math.ceil(baseGoal * 0.7)
     : baseGoal;
+  const goalMetToday =
+    steps >= goal ||
+    history.some(
+      (log) => log.date === getTodayKey() && log.goalReached
+    );
 
   // حالة مؤقت الجلسة
   const [isTracking, setIsTracking] = useState<boolean>(false);
@@ -298,27 +303,27 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View className={`${rowDirection} justify-between items-center mb-5`}>
-          <Text className="text-2xl font-bold" style={{ color: text }}>
-            {t('app.name')} <Text style={{ color: accent }}>.</Text>
-          </Text>
+          <AppText className="text-2xl font-bold" style={{ color: text }}>
+            {t('app.name')} <AppText style={{ color: accent }}>.</AppText>
+          </AppText>
 
           <View
             className={`${rowDirection} items-center px-3.5 py-2 rounded-full border gap-1.5`}
             style={{ backgroundColor: card, borderColor: border }}
           >
             <Coins color={accent} size={18} />
-            <Text className="text-sm font-bold" style={{ color: text }}>
+            <AppText className="text-sm font-bold" style={{ color: text }}>
               {totalCoins.toLocaleString('en-US')} {t('home.coins')}
-            </Text>
+            </AppText>
             {isMultiplierActive && (
               <View
                 className={`${rowDirection} items-center gap-0.5 rounded-full px-1.5 py-0.5`}
                 style={{ backgroundColor: `${accent}20` }}
               >
                 <Flame color={accent} size={12} />
-                <Text className="text-[10px] font-black" style={{ color: accent }}>
+                <AppText className="text-[10px] font-black" style={{ color: accent }}>
                   x2
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -343,26 +348,26 @@ export default function HomeScreen() {
                 size={28}
                 style={{ marginBottom: 8 }}
               />
-              <Text className="text-sm" style={{ color: subText }}>
+              <AppText className="text-sm" style={{ color: subText }}>
                 {t('home.todaySteps')}
-              </Text>
-              <Text
+              </AppText>
+              <AppText
                 className="text-4xl font-black my-0.5"
                 style={{ color: text }}
               >
                 {steps.toLocaleString('en-US')}
-              </Text>
+              </AppText>
               {pedometerStatus ? (
-                <Text className="text-xs font-semibold text-red-500 mt-1">
+                <AppText className="text-xs font-semibold text-red-500 mt-1">
                   {t(pedometerStatus)}
-                </Text>
+                </AppText>
               ) : (
-                <Text
+                <AppText
                   style={{ color: accent }}
                   className="text-xs font-semibold"
                 >
                   {t('home.goal')} {goal.toLocaleString('en-US')}
-                </Text>
+                </AppText>
               )}
             </View>
 
@@ -395,56 +400,60 @@ export default function HomeScreen() {
           >
             <View className="items-center">
               <MapPin color={accent} size={20} />
-              <Text
+              <AppText
                 className="text-lg font-bold mt-1.5"
                 style={{ color: text }}
               >
                 {distanceKm.toFixed(2)}
-              </Text>
-              <Text className="text-xs mt-0.5" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-xs mt-0.5" style={{ color: subText }}>
                 {t('home.distanceKm')}
-              </Text>
+              </AppText>
             </View>
 
             <View className="w-px h-7" style={{ backgroundColor: border }} />
 
             <View className="items-center">
               <Clock color={accent} size={20} />
-              <Text
+              <AppText
                 className="text-lg font-bold mt-1.5"
                 style={{ color: text }}
               >
                 {formatTime(secondsElapsed)}
-              </Text>
-              <Text className="text-xs mt-0.5" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-xs mt-0.5" style={{ color: subText }}>
                 {isTracking ? `${t('home.activeTime')} 🟢` : t('home.time')}
-              </Text>
+              </AppText>
             </View>
 
             <View className="w-px h-7" style={{ backgroundColor: border }} />
 
             <View className="items-center">
               <Flame color={accent} size={20} />
-              <Text
+              <AppText
                 className="text-lg font-bold mt-1.5"
                 style={{ color: text }}
               >
                 {calories.toLocaleString('en-US')}
-              </Text>
-              <Text className="text-xs mt-0.5" style={{ color: subText }}>
+              </AppText>
+              <AppText className="text-xs mt-0.5" style={{ color: subText }}>
                 {t('home.calories')}
-              </Text>
+              </AppText>
             </View>
           </View>
         </View>
 
-        {/* مهام اليوم الديناميكية */}
-        <DailyTasksList
-          currentSteps={steps}
-          currentDistanceKm={distanceKm}
-          currentCalories={calories}
-          currentMinutes={secondsElapsed / 60}
-        />
+        {goalMetToday && (
+          <View
+            className="rounded-2xl border px-4 py-3 mb-5"
+            style={{ backgroundColor: `${accent}18`, borderColor: `${accent}55` }}
+          >
+            <AppText className="text-center font-bold" style={{ color: accent }}>
+              {t('home.goalRewardMessage')}
+            </AppText>
+          </View>
+        )}
+        <WaterCard />
       </ScrollView>
     </SafeAreaView>
   );

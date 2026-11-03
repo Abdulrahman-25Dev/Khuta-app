@@ -5,6 +5,11 @@ module.exports = {
   darkMode: "class",
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Tajawal', 'Inter'],
+        bold: ['Tajawal-Bold', 'Inter-Bold'],
+        black: ['Tajawal-Black'],
+      },
       colors: {
         // ألوان موحدة للوضعين الفاتح والداكن (تستخدم عبر bg-appBg-light dark:bg-appBg-dark)
         appBg: {

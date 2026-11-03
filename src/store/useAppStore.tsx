@@ -1,12 +1,4 @@
 import {
-  generateDailyTasks,
-  getTaskDays,
-  getTaskCoins,
-  type Task,
-} from '../utils/taskGenerator';
-import { refreshTasksForToday, shiftDate } from '../utils/taskLifecycle';
-import { getUserLevel } from '../utils/levelUtils';
-import {
   handleDailyGoalReached,
   syncEveningReminder,
   cancelEveningReminder,
@@ -101,29 +93,13 @@ interface AppState {
   addCoins: (amount: number) => void;
 
   lastActiveDate: string;
-  lastResetDate: string;
   setLastActiveDate: (date: string) => void;
-  resetDailyQuestProgress: () => void;
 
   // 2. حالة السجل ودوال التحديث
   history: DailyLog[];
   addOrUpdateDailyLog: (log: Omit<DailyLog, 'goalReached'>) => void;
   // إغلاق اليوم عند منتصف الليل: يثبّت سجل اليوم ويدفع التاريخ، دون أي مساس برصيد العملات
   finalizeDay: (log: Omit<DailyLog, 'goalReached'>) => void;
-
-  // 3. المهام اليومية الديناميكية
-  dailyTasks: Task[];
-  tasksDate: string;
-  // تجديد المهام عند تغيّر التاريخ أو مستوى المستخدم
-  refreshDailyTasks: () => void;
-  // إنهاء مهمة وإضافة مكافأة العملات إليها
-  completeTask: (taskId: string) => void;
-  updateTaskProgress: (
-    taskId: string,
-    newProgress: number,
-    todayKey: string,
-    todayValue: number
-  ) => void;
 
   // تفضيل التحكم بالتنبيهات (إشعار إنجاز الهدف + تذكير المساء)
   notificationsEnabled: boolean;
@@ -197,15 +173,7 @@ export const useAppStore = create<AppState>()(
         }),
 
       lastActiveDate: getTodayKey(),
-      lastResetDate: new Date().toISOString().split('T')[0],
       setLastActiveDate: (date) => set({ lastActiveDate: date }),
-      resetDailyQuestProgress: () =>
-        set((state) => {
-          const currentDate = getTodayKey();
-          if (state.lastResetDate === currentDate) return {};
-
-          return { lastResetDate: currentDate };
-        }),
 
       // 3. القيمة الافتراضية ودالة تحديث السجل
       history: [],
@@ -254,7 +222,6 @@ export const useAppStore = create<AppState>()(
       finalizeDay: (newLog) => {
         get().addOrUpdateDailyLog(newLog);
         set({ lastActiveDate: getTodayKey() });
-        get().refreshDailyTasks();
         // Trigger 2: بعد انقلاب التاريخ نُبقي جدولة تذكير المساء متزامنة (اليوم غير مكتمل بعد)
         void syncEveningReminder({
           goalMetToday: false,
@@ -262,65 +229,6 @@ export const useAppStore = create<AppState>()(
           todayKey: getTodayKey(),
         });
       },
-
-      // المهام اليومية: تُولَّد من تاريخ اليوم ومستوى المستخدم، وتظل ثابتة طوال اليوم
-      dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-      tasksDate: getTodayKey(),
-      refreshDailyTasks: () =>
-        set((state) => {
-          const today = getTodayKey();
-          const totalSteps = state.history.reduce(
-            (sum, log) => sum + log.steps,
-            0
-          );
-          const userLevel = getUserLevel(totalSteps).level;
-          const refreshed = refreshTasksForToday(
-            state.dailyTasks,
-            today,
-            userLevel
-          );
-
-          return {
-            lastResetDate: today,
-            tasksDate: today,
-            dailyTasks: refreshed,
-          };
-        }),
-      updateTaskProgress: (taskId, newProgress, todayKey, todayValue) =>
-        set((state) => ({
-          dailyTasks: state.dailyTasks.map((task) => {
-            if (task.id !== taskId) return task;
-            const dailyProgress = { ...(task.dailyProgress || {}) };
-            const oldToday = dailyProgress[todayKey] ?? 0;
-            dailyProgress[todayKey] = Math.max(oldToday, todayValue);
-            return {
-              ...task,
-              progress: newProgress,
-              dailyProgress,
-            };
-          }),
-        })),
-      completeTask: (taskId) =>
-        set((state) => {
-          const task = state.dailyTasks.find((t) => t.id === taskId);
-          if (!task || task.completed) return {};
-          const previousCoins = getStoredCoins() ?? state.totalCoins;
-          const newCoins = previousCoins + task.coins;
-          setStoredCoins(newCoins);
-          const today = getTodayKey();
-          const totalSteps = state.history.reduce(
-            (sum, log) => sum + log.steps,
-            0
-          );
-          const userLevel = getUserLevel(totalSteps).level;
-          const updatedTasks = state.dailyTasks.map((t) =>
-            t.id === taskId ? { ...t, completed: true } : t
-          );
-          return {
-            totalCoins: newCoins,
-            dailyTasks: refreshTasksForToday(updatedTasks, today, userLevel),
-          };
-        }),
 
       // تفعيل/تعطيل التنبيهات + مزامنة جدولة تذكير المساء فوراً
       notificationsEnabled: true,
@@ -496,11 +404,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'khuta-app-storage',
       storage: createJSONStorage(() => zustandStorage),
-      version: 6,
-      onRehydrateStorage: () => (state) => {
-        state?.resetDailyQuestProgress();
-        state?.refreshDailyTasks();
-      },
+      version: 7,
       // التخفيف: نحفظ بيانات الحالة الضرورية فقط، ومنها رصيد العملات (totalCoins)
       // لضمان بقاء الرصيد المتراكم محفوظاً عبر إعادة فتح التطبيق وعبر الأيام.
       partialize: (state) => ({
@@ -510,10 +414,7 @@ export const useAppStore = create<AppState>()(
         streakDays: state.streakDays,
         totalCoins: state.totalCoins,
         lastActiveDate: state.lastActiveDate,
-        lastResetDate: state.lastResetDate,
         history: state.history,
-        dailyTasks: state.dailyTasks,
-        tasksDate: state.tasksDate,
         notificationsEnabled: state.notificationsEnabled,
         currentProfileBannerId: state.currentProfileBannerId,
         activeRingStyle: state.activeRingStyle,
@@ -523,10 +424,13 @@ export const useAppStore = create<AppState>()(
         activeEffects: state.activeEffects,
         lastFreeClaimDate: state.lastFreeClaimDate,
       }),
-      migrate: (persistedState, version) => {
+      migrate: (persistedState) => {
         const persisted = (persistedState ?? {}) as Partial<AppState> & {
           currentThemeId?: string;
           accentColor?: AccentColor;
+          dailyTasks?: unknown;
+          tasksDate?: string;
+          lastResetDate?: string;
         };
         const fallback = {
           themeMode: 'dark' as ThemeMode,
@@ -539,10 +443,7 @@ export const useAppStore = create<AppState>()(
           streakDays: 0,
           totalCoins: 0,
           lastActiveDate: getTodayKey(),
-          lastResetDate: new Date().toISOString().split('T')[0],
           history: [],
-          dailyTasks: generateDailyTasks(getUserLevel(0).level, getTodayKey()),
-          tasksDate: getTodayKey(),
           notificationsEnabled: true,
           activeTheme: {
             kind: 'store',
@@ -566,47 +467,17 @@ export const useAppStore = create<AppState>()(
         const {
           currentThemeId: _legacyThemeId,
           accentColor: _legacyAccentColor,
+          dailyTasks: _legacyDailyTasks,
+          tasksDate: _legacyTasksDate,
+          lastResetDate: _legacyLastResetDate,
           ...rest
         } = persisted;
-        const tasksDate = persisted.tasksDate ?? getTodayKey();
-        const fallbackTitles: Record<Task['type'], string> = {
-          steps: 'تحدي الخطوات',
-          distance: 'تحدي المسافة',
-          calories: 'تحدي السعرات',
-          duration: 'وقت النشاط',
-        };
-        const fallbackUnits: Record<Task['type'], string> = {
-          steps: 'خطوة',
-          distance: 'كم',
-          calories: 'سعرة',
-          duration: 'دقيقة',
-        };
-        const migratedTasks: Task[] = (
-          persisted.dailyTasks ?? fallback.dailyTasks
-        ).map((task) => {
-          const days = task.days ?? getTaskDays(task.type, task.target);
-          const startDate = task.startDate ?? tasksDate;
-          return {
-            ...task,
-            title: task.title ?? fallbackTitles[task.type],
-            titleKey: task.titleKey ?? `tasks.types.${task.type}.title_0`,
-            unit: task.unit ?? fallbackUnits[task.type],
-            unitKey: task.unitKey ?? `tasks.types.${task.type}.unit`,
-            days,
-            coins: task.coins ?? getTaskCoins(task.type, task.target),
-            startDate,
-            expiresAt: task.expiresAt ?? shiftDate(startDate, days - 1),
-            progress: version < 6 ? 0 : (task.progress ?? 0),
-            dailyProgress: version < 6 ? {} : (task.dailyProgress ?? {}),
-          };
-        });
         // لا نطلب من fallback أن يغطي رصيد العملات: أي رصيد مخزّن مُسبقاً يُحفظ.
         return {
           ...fallback,
           ...rest,
           // الحقل الموحّد الجديد هو مصدر الحقيقة، ويحلّ مكان الحقلين القديمين
           activeTheme: legacyActiveTheme,
-          dailyTasks: migratedTasks,
         } as AppState;
       },
     }

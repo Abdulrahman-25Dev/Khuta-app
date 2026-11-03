@@ -11,6 +11,7 @@ import {
 } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useColorScheme } from 'nativewind';
+import { useFonts } from 'expo-font';
 
 import '../i18n/i18next';
 import { useAppStore, getTodayKey } from '../../store/useAppStore';
@@ -21,10 +22,22 @@ import {
 import { CustomModalHost } from '../components/CustomModal';
 import {
   initializeNotifications,
+  scheduleWaterReminders,
   syncEveningReminder,
 } from '../services/notificationService';
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Tajawal: require('../../assets/fonts/Tajawal-Regular.ttf'),
+    'Tajawal-Bold': require('../../assets/fonts/Tajawal-Bold.ttf'),
+    'Tajawal-Black': require('../../assets/fonts/Tajawal-Black.ttf'),
+    Inter: require('../../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Bold': require('../../assets/fonts/Inter-Bold.ttf'),
+  });
+
+  if (fontError) throw fontError;
+  if (!fontsLoaded) return null;
+
   return (
     <Suspense fallback={null}>
       <SafeAreaProvider>
@@ -80,6 +93,16 @@ function RootNavigator() {
         goalMetToday: todayLog?.goalReached ?? false,
         notificationsEnabled: state.notificationsEnabled,
         todayKey,
+      });
+      await scheduleWaterReminders({
+        start: state.user.waterReminderStart,
+        end: state.user.waterReminderEnd,
+        interval: state.user.waterReminderInterval,
+        enabled: state.user.waterNotificationsEnabled,
+        goalReached:
+          (todayLog?.waterCups ?? 0) >= state.user.waterGoalCups,
+      }).catch((error) => {
+        console.error('Failed to schedule water reminders on launch:', error);
       });
     })();
     return () => {

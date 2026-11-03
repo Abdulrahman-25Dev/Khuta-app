@@ -30,42 +30,34 @@
     "notAvailable": "غير متاح على هذا الجهاز",
     "permissionRequired": "يرجى تفعيل إذن الحركة في الإعدادات",
     "sensorError": "خطأ في مستشعر الخطوات",
-    "sensorErrorTitle": "خطأ في المستشعر"
+    "sensorErrorTitle": "خطأ في المستشعر",
+    "goalRewardMessage": "أحسنت! حصلت على مكافأة الهدف اليومي 🎉"
+  },
+  "water": {
+    "title": "الماء",
+    "progress": "{{current}} / {{goal}} أكواب",
+    "cups": "أكواب",
+    "minutes": "دقيقة",
+    "addCup": "إضافة كوب ماء",
+    "undoCup": "إزالة كوب ماء",
+    "settings": {
+      "title": "الماء",
+      "reminders": "تذكيرات شرب الماء",
+      "goal": "هدف الماء اليومي",
+      "start": "بداية التذكير",
+      "end": "نهاية التذكير",
+      "interval": "الفاصل بين التذكيرات"
+    },
+    "notifications": {
+      "reminderTitle": "💧 حان وقت شرب الماء",
+      "reminderBody": "اشرب كوباً من الماء لتحافظ على ترطيبك",
+      "reminderAfterGoal": "حافظ على ترطيبك",
+      "goalCompleteTitle": "🎉 أكملت هدف الماء!",
+      "goalCompleteBody": "أحسنت، استمر في شرب الماء."
+    }
   },
   "splash": {
     "tagline": "حُركتك.. ثروتك"
-  },
-  "tasks": {
-    "title": "المهام اليومية",
-    "today": "اليوم",
-    "withinTwoDays": "خلال يومين",
-    "withinDays": "خلال {{count}} أيام",
-    "expiresToday": "ينتهي اليوم",
-    "expiresAfter": "ينتهي بعد {{count}} أيام",
-    "completed": "اكتمل!",
-    "coinReward": "+{{count}} عملة",
-    "types": {
-      "steps": {
-        "title_0": "تحدي الخطوات",
-        "title_1": "خطوات اليوم",
-        "unit": "خطوة"
-      },
-      "distance": {
-        "title_0": "تحدي المسافة",
-        "title_1": "مسافة المشي",
-        "unit": "كم"
-      },
-      "calories": {
-        "title_0": "تحدي السعرات",
-        "title_1": "حارق السعرات",
-        "unit": "سعرة"
-      },
-      "duration": {
-        "title_0": "وقت النشاط",
-        "title_1": "حركية الجلسة",
-        "unit": "دقيقة"
-      }
-    }
   },
   "history": {
     "today": "اليوم",
@@ -95,7 +87,7 @@
     "enabled": "مُفعّل",
     "disabled": "مُعطّل",
     "theme": "المظهر",
-    "store": "المتجر",
+    "store": "متجر خطى",
     "personalData": "البيانات الشخصية",
     "name": "اسم المستخدم",
     "weight": "الوزن",
@@ -106,6 +98,9 @@
     "dailyGoal": "الهدف اليومي",
     "settings": "الإعدادات",
     "notifications": "تنبيهات الهدف اليومي",
+    "supportDeveloper": "ادعم المطور",
+    "buyDeveloperCoffee": "اشترِ قهوة للمطور",
+    "comingSoon": "قريباً",
     "language": "اللغة",
     "storeAndEarn": "المتجر والربح",
     "totalSteps": "إجمالي الخطوات",
@@ -124,6 +119,17 @@
       "heightPlaceholder": "مثال: 170",
       "dailyGoalTitle": "تعديل الهدف اليومي",
       "dailyGoalPlaceholder": "مثال: 6000",
+      "waterGoalTitle": "تعديل هدف الماء",
+      "waterGoalPlaceholder": "مثال: 10",
+      "waterReminderStartTitle": "بداية تذكير الماء",
+      "waterReminderEndTitle": "نهاية تذكير الماء",
+      "waterReminderTimePlaceholder": "مثال: 08:00",
+      "waterReminderIntervalTitle": "الفاصل بين التذكيرات",
+      "waterReminderIntervalPlaceholder": "مثال: 60",
+      "invalidValue": "أدخل قيمة صحيحة أكبر من صفر",
+      "invalidTime": "أدخل الوقت بصيغة 24 ساعة، مثل 08:00",
+      "invalidTimeRange": "يجب أن تكون البداية قبل النهاية",
+      "intervalTooFrequent": "قلّل تكرار التذكيرات أو زِد الفاصل بينها",
       "saveChanges": "حفظ التعديلات"
     },
     "languageRestartTitle": "إعادة تشغيل التطبيق",
@@ -155,7 +161,7 @@
     "owned": "محدد",
     "buyPrice": "شراء {{price}}",
     "insufficient": "رصيد غير كافٍ",
-    "insufficientMsg": "أكمل مهامك اليومية وبلوغ الهدف لجمع المزيد من العملات.",
+    "insufficientMsg": "بلوغ هدفك اليومي يساعدك على جمع المزيد من العملات.",
     "purchased": "تم الشراء",
     "purchasedThemeMsg": "أُضيف المظهر إلى مكتبتك، فعّله من زر «تطبيق».",
     "purchasedBannerMsg": "أُضيفت الخلفية إلى مكتبتك، فعّلها من زر «تطبيق».",

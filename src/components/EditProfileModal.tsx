@@ -1,7 +1,6 @@
 import React, { useEffect, useState, forwardRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   type KeyboardTypeOptions,
 } from 'react-native';
@@ -14,6 +13,7 @@ import BottomSheet, {
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../store/useAppStore';
 import { useTheme } from '../context/ThemeContext';
+import AppText from './AppText';
 
 export type FieldType =
   | 'name'
@@ -21,6 +21,10 @@ export type FieldType =
   | 'height'
   | 'gender'
   | 'dailyGoal'
+  | 'waterGoalCups'
+  | 'waterReminderStart'
+  | 'waterReminderEnd'
+  | 'waterReminderInterval'
   | null;
 
 interface Props {
@@ -37,12 +41,14 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
   const { user, updateUser } = useAppStore();
   const { accent, isDark, bg, card, border, text, subText } = useTheme();
   const [value, setValue] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (activeField && activeField in user) {
       const currentValue = user[activeField as keyof typeof user];
       setValue(currentValue !== undefined ? String(currentValue) : '');
     }
+    setError('');
   }, [activeField, user]);
 
   const handleSave = () => {
@@ -54,8 +60,83 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
       return;
     }
 
-    const parsedValue = activeField === 'name' ? value : Number(value);
-    updateUser({ [activeField]: parsedValue });
+    if (activeField === 'name') {
+      updateUser({ name: value });
+      onClose();
+      return;
+    }
+
+    if (
+      activeField === 'waterReminderStart' ||
+      activeField === 'waterReminderEnd'
+    ) {
+      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) {
+        setError(t('profile.edit.invalidTime'));
+        return;
+      }
+      const start = activeField === 'waterReminderStart' ? value : user.waterReminderStart;
+      const end = activeField === 'waterReminderEnd' ? value : user.waterReminderEnd;
+      const toMinutes = (time: string) => {
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      if (toMinutes(start) >= toMinutes(end)) {
+        setError(t('profile.edit.invalidTimeRange'));
+        return;
+      }
+      updateUser(
+        activeField === 'waterReminderStart'
+          ? { waterReminderStart: value }
+          : { waterReminderEnd: value }
+      );
+      onClose();
+      return;
+    }
+
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      setError(t('profile.edit.invalidValue'));
+      return;
+    }
+    if (
+      (activeField === 'waterGoalCups' ||
+        activeField === 'waterReminderInterval' ||
+        activeField === 'dailyGoal') &&
+      !Number.isInteger(parsedValue)
+    ) {
+      setError(t('profile.edit.invalidValue'));
+      return;
+    }
+    if (activeField === 'waterReminderInterval') {
+      const [startHour, startMinute] = user.waterReminderStart
+        .split(':')
+        .map(Number);
+      const [endHour, endMinute] = user.waterReminderEnd.split(':').map(Number);
+      const start = startHour * 60 + startMinute;
+      const end = endHour * 60 + endMinute;
+      if (Math.floor((end - start) / parsedValue) + 1 > 60) {
+        setError(t('profile.edit.intervalTooFrequent'));
+        return;
+      }
+    }
+
+    switch (activeField) {
+      case 'weight':
+        updateUser({ weight: parsedValue });
+        break;
+      case 'height':
+        updateUser({ height: parsedValue });
+        break;
+      case 'dailyGoal':
+        updateUser({ dailyGoal: parsedValue });
+        break;
+      case 'waterGoalCups':
+        updateUser({ waterGoalCups: parsedValue });
+        break;
+      case 'waterReminderInterval':
+        updateUser({ waterReminderInterval: parsedValue });
+        break;
+    }
     onClose();
   };
 
@@ -100,6 +181,32 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
           keyboard: 'numeric' as KeyboardTypeOptions,
           unit: t('home.stepsUnit'),
         };
+      case 'waterGoalCups':
+        return {
+          title: t('profile.edit.waterGoalTitle'),
+          placeholder: t('profile.edit.waterGoalPlaceholder'),
+          keyboard: 'numeric' as KeyboardTypeOptions,
+          unit: t('water.cups'),
+        };
+      case 'waterReminderStart':
+      case 'waterReminderEnd':
+        return {
+          title: t(
+            activeField === 'waterReminderStart'
+              ? 'profile.edit.waterReminderStartTitle'
+              : 'profile.edit.waterReminderEndTitle'
+          ),
+          placeholder: t('profile.edit.waterReminderTimePlaceholder'),
+          keyboard: 'default' as KeyboardTypeOptions,
+          unit: '',
+        };
+      case 'waterReminderInterval':
+        return {
+          title: t('profile.edit.waterReminderIntervalTitle'),
+          placeholder: t('profile.edit.waterReminderIntervalPlaceholder'),
+          keyboard: 'numeric' as KeyboardTypeOptions,
+          unit: t('water.minutes'),
+        };
       default:
         return {
           title: '',
@@ -117,7 +224,7 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
   return (
     <BottomSheet
       ref={ref}
-      snapPoints={['40%']}
+      snapPoints={['45%']}
       enablePanDownToClose
       onClose={onClose}
       keyboardBehavior="interactive"
@@ -127,9 +234,9 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
       handleIndicatorStyle={{ backgroundColor: isDark ? '#8B949E' : '#94A3B8' }}
     >
       <BottomSheetView className="p-5 flex-1 justify-between">
-        <Text className="text-lg font-bold text-right mb-2" style={{ color: text }}>
+        <AppText className="text-lg font-bold text-right mb-2" style={{ color: text }}>
           {config.title}
-        </Text>
+        </AppText>
 
         {activeField === 'gender' ? (
           <View className={`${rowDirection} gap-3`}>
@@ -146,12 +253,12 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
                     borderColor: isSelected ? accent : border,
                   }}
                 >
-                  <Text
+                  <AppText
                     className="font-bold text-base"
                     style={{ color: text }}
                   >
                     {t(`profile.${gender}`)}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               );
             })}
@@ -162,24 +269,33 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
             style={{ backgroundColor: bg, borderColor: border }}
           >
             {config.unit !== '' && (
-              <Text
+              <AppText
                 className={`font-bold text-base ${i18n.dir() === 'rtl' ? 'ml-2' : 'mr-2'}`}
                 style={{ color: subText }}
               >
                 {config.unit}
-              </Text>
+              </AppText>
             )}
             <BottomSheetTextInput
               value={value}
               onChangeText={setValue}
               placeholder={config.placeholder}
               placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
-              keyboardType={config.keyboard as any}
+              keyboardType={config.keyboard}
               className={`flex-1 p-3 ${textAlignment} text-base font-semibold`}
-              style={{ color: text }}
+              style={{
+                color: text,
+                fontFamily: i18n.language.startsWith('ar') ? 'Tajawal' : 'Inter',
+              }}
               autoFocus
             />
           </View>
+        )}
+
+        {error !== '' && (
+          <AppText className="text-sm text-red-500 mt-2 text-right">
+            {error}
+          </AppText>
         )}
 
         <TouchableOpacity
@@ -188,9 +304,9 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
           style={{ backgroundColor: accent }}
           className="p-4 rounded-xl items-center mt-4 mb-2"
         >
-          <Text className="text-white font-bold text-base">
+          <AppText className="text-white font-bold text-base">
             {t('profile.edit.saveChanges')}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </BottomSheetView>
     </BottomSheet>
