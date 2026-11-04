@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   type KeyboardTypeOptions,
 } from 'react-native';
+import { Clock } from 'lucide-react-native';
 import BottomSheet, { 
   BottomSheetView, 
   BottomSheetBackdrop, 
@@ -32,6 +33,34 @@ interface Props {
   onClose: () => void;
 }
 
+const formatTimeInput = (input: string) => {
+  const digits = input
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/\D/g, '')
+    .slice(0, 4);
+  return digits.length > 2
+    ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+    : digits;
+};
+
+const normalizeTimeInput = (input: string): string | null => {
+  const digits = input
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/\D/g, '')
+    .slice(0, 4);
+  if (digits.length === 0) return null;
+
+  const hours = Number(digits.slice(0, 2));
+  const minuteDigits = digits.slice(2);
+  const minutes =
+    minuteDigits.length === 0
+      ? 0
+      : Number(minuteDigits.padEnd(2, '0'));
+
+  if (hours > 23 || minutes > 59) return '23:59';
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
 export const EditProfileModal = forwardRef<BottomSheet, Props>(
   ({ activeField, onClose }, ref) => {
   const { t, i18n } = useTranslation();
@@ -42,6 +71,9 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
   const { accent, isDark, bg, card, border, text, subText } = useTheme();
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
+  const isTimeField =
+    activeField === 'waterReminderStart' ||
+    activeField === 'waterReminderEnd';
 
   useEffect(() => {
     if (activeField && activeField in user) {
@@ -66,16 +98,21 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
       return;
     }
 
-    if (
-      activeField === 'waterReminderStart' ||
-      activeField === 'waterReminderEnd'
-    ) {
-      if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(value)) {
+    if (isTimeField) {
+      const normalizedTime = normalizeTimeInput(value);
+      if (!normalizedTime) {
         setError(t('profile.edit.invalidTime'));
         return;
       }
-      const start = activeField === 'waterReminderStart' ? value : user.waterReminderStart;
-      const end = activeField === 'waterReminderEnd' ? value : user.waterReminderEnd;
+      setValue(normalizedTime);
+      const start =
+        activeField === 'waterReminderStart'
+          ? normalizedTime
+          : user.waterReminderStart;
+      const end =
+        activeField === 'waterReminderEnd'
+          ? normalizedTime
+          : user.waterReminderEnd;
       const toMinutes = (time: string) => {
         const [hours, minutes] = time.split(':').map(Number);
         return hours * 60 + minutes;
@@ -86,8 +123,8 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
       }
       updateUser(
         activeField === 'waterReminderStart'
-          ? { waterReminderStart: value }
-          : { waterReminderEnd: value }
+          ? { waterReminderStart: normalizedTime }
+          : { waterReminderEnd: normalizedTime }
       );
       onClose();
       return;
@@ -193,11 +230,11 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
         return {
           title: t(
             activeField === 'waterReminderStart'
-              ? 'profile.edit.waterReminderStartTitle'
-              : 'profile.edit.waterReminderEndTitle'
+              ? 'profile.edit.waterStartTitle'
+              : 'profile.edit.waterEndTitle'
           ),
-          placeholder: t('profile.edit.waterReminderTimePlaceholder'),
-          keyboard: 'default' as KeyboardTypeOptions,
+          placeholder: t('profile.edit.timePlaceholder'),
+          keyboard: 'number-pad' as KeyboardTypeOptions,
           unit: '',
         };
       case 'waterReminderInterval':
@@ -276,12 +313,33 @@ export const EditProfileModal = forwardRef<BottomSheet, Props>(
                 {config.unit}
               </AppText>
             )}
+            {isTimeField && (
+              <Clock
+                size={20}
+                color={accent}
+                style={{ marginEnd: 10 }}
+              />
+            )}
             <BottomSheetTextInput
               value={value}
-              onChangeText={setValue}
+              onChangeText={(input) => {
+                setError('');
+                setValue(isTimeField ? formatTimeInput(input) : input);
+              }}
+              onBlur={() => {
+                if (!isTimeField) return;
+                const normalizedTime = normalizeTimeInput(value);
+                if (normalizedTime) {
+                  setValue(normalizedTime);
+                  setError('');
+                } else {
+                  setError(t('profile.edit.invalidTime'));
+                }
+              }}
               placeholder={config.placeholder}
               placeholderTextColor={isDark ? '#8B949E' : '#94A3B8'}
               keyboardType={config.keyboard}
+              maxLength={isTimeField ? 5 : undefined}
               className={`flex-1 p-3 ${textAlignment} text-base font-semibold`}
               style={{
                 color: text,
